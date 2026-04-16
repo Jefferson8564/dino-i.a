@@ -3,916 +3,650 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Lara Admin — O Rei da Coxinha</title>
+<title>Dino</title>
 <meta name="theme-color" content="#0B141A">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overflow: hidden; }
   body { background: #0B141A; font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', Roboto, 'Segoe UI', Arial, sans-serif; display: flex; justify-content: center; align-items: center; }
   #app { width: 100%; max-width: 480px; height: 100dvh; display: flex; flex-direction: column; position: relative; background: #0B141A; }
-
-  /* LOGIN */
-  #login-screen { position: fixed; inset: 0; background: #0B141A; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; z-index: 200; padding: 24px; }
-  .login-logo { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #25D366, #128C7E); display: flex; align-items: center; justify-content: center; font-size: 40px; box-shadow: 0 0 40px rgba(37,211,102,.35); animation: pulse 2s ease-in-out infinite; margin-bottom: 20px; }
-  .login-title { color: #E9EDEF; font-size: 22px; font-weight: 700; margin-bottom: 4px; text-align: center; }
-  .login-subtitle { color: #8696A0; font-size: 13px; text-align: center; margin-bottom: 32px; line-height: 1.5; }
-  .login-card { background: #111B21; border-radius: 16px; padding: 24px 20px; width: 100%; max-width: 360px; border: 1px solid #2A3942; }
-  .login-label { color: #8696A0; font-size: 12px; font-weight: 600; letter-spacing: .5px; margin-bottom: 8px; display: block; }
-  .phone-input-wrap { display: flex; align-items: center; background: #2A3942; border-radius: 10px; border: 2px solid transparent; transition: border-color .2s; overflow: hidden; }
-  .phone-input-wrap:focus-within { border-color: #25D366; }
-  .phone-prefix { background: #1E2D36; color: #25D366; font-size: 15px; font-weight: 700; padding: 13px 12px; white-space: nowrap; border-right: 2px solid #2A3942; letter-spacing: .5px; }
-  #phone-input { flex: 1; background: transparent; border: none; outline: none; color: #E9EDEF; font-size: 18px; padding: 13px 14px; font-family: inherit; letter-spacing: 2px; }
-  #phone-input::placeholder { color: #8696A0; letter-spacing: 1px; font-size: 15px; }
-  .phone-hint { color: #8696A0; font-size: 11px; margin-top: 8px; text-align: center; }
-  #login-btn { width: 100%; margin-top: 20px; background: #25D366; color: #fff; border: none; border-radius: 10px; padding: 14px; font-size: 16px; font-weight: 700; cursor: pointer; transition: background .2s, transform .1s; font-family: inherit; }
-  #login-btn:hover { background: #1fbd59; }
-  #login-btn:active { transform: scale(.98); }
-  #login-btn:disabled { background: #2A3942; color: #8696A0; cursor: not-allowed; transform: none; }
-  #login-error { color: #FF6B6B; font-size: 12px; text-align: center; margin-top: 12px; display: none; background: rgba(255,107,107,.1); padding: 8px 12px; border-radius: 8px; }
-  .login-footer { color: #8696A0; font-size: 11px; text-align: center; margin-top: 20px; line-height: 1.6; }
-  .login-footer strong { color: #25D366; }
-
-  /* HEADER */
   #header { background: #111B21; padding: 10px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #2A3942; flex-shrink: 0; z-index: 10; }
-  .header-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #25D366, #128C7E); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; position: relative; }
+  .header-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #c75b24, #8B3E17); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; position: relative; }
   .status-dot { position: absolute; bottom: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; background: #25D366; border: 2px solid #111B21; transition: background 0.3s; }
   .header-info { flex: 1; }
   .header-name { color: #E9EDEF; font-weight: 600; font-size: 15px; }
   .header-status { color: #25D366; font-size: 12px; }
-  .admin-badge { background: linear-gradient(135deg, #c75b24, #e67e22); color: white; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 20px; letter-spacing: .5px; vertical-align: middle; }
-  .header-actions { display: flex; gap: 16px; color: #8696A0; font-size: 20px; }
-  .header-actions span { cursor: pointer; }
-  #tts-btn { cursor: pointer; font-size: 20px; transition: transform .15s; user-select: none; }
-  #tts-btn:active { transform: scale(.85); }
-  #tts-btn.on { filter: drop-shadow(0 0 4px #25D366); }
-
-  /* WALLPAPER */
   #wallpaper { position: absolute; inset: 61px 0 64px; background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); pointer-events: none; z-index: 0; }
-
-  /* MESSAGES */
-  #messages { flex: 1; overflow-y: auto; padding: 8px 0; display: flex; flex-direction: column; gap: 0; position: relative; z-index: 1; }
+  #messages { flex: 1; overflow-y: auto; padding: 8px 0; display: flex; flex-direction: column; position: relative; z-index: 1; }
   #messages::-webkit-scrollbar { width: 4px; }
-  #messages::-webkit-scrollbar-track { background: transparent; }
   #messages::-webkit-scrollbar-thumb { background: #2A3942; border-radius: 4px; }
   .date-pill { display: flex; justify-content: center; margin: 6px 0 8px; }
-  .date-pill span { background: #1E2D36; border-radius: 8px; padding: 4px 10px; color: #8696A0; font-size: 11.5px; letter-spacing: .2px; }
-
-  /* MSG ROWS */
-  .msg-row { display: flex; align-items: flex-end; gap: 5px; margin-bottom: 2px; animation: fadeUp .18s ease; }
+  .date-pill span { background: #1E2D36; border-radius: 8px; padding: 4px 10px; color: #8696A0; font-size: 11.5px; }
+  .msg-row { display: flex; align-items: flex-end; margin-bottom: 2px; animation: fadeUp .18s ease; }
   .msg-row.user { justify-content: flex-end; padding-left: 52px; padding-right: 8px; }
   .msg-row.bot  { justify-content: flex-start; padding-right: 52px; padding-left: 8px; }
-  .msg-row.sys  { justify-content: center; padding: 0 16px; margin: 4px 0; }
-  .bot-avatar { display: none; }
-
-  /* BUBBLES */
-  .bubble {
-    padding: 6px 7px 4px 9px;
-    max-width: 100%;
-    position: relative;
-    box-shadow: 0 1px 0.5px rgba(0,0,0,.36);
-    word-wrap: break-word;
-  }
-  /* Rabo da bolha — bot (esquerda) */
-  .bubble.bot {
-    background: #202C33;
-    border-radius: 0 7.5px 7.5px 7.5px;
-    margin-left: 0;
-  }
-  .bubble.bot::before {
-    content: "";
-    position: absolute;
-    top: 0; left: -8px;
-    width: 0; height: 0;
-    border-style: solid;
-    border-width: 0 9px 9px 0;
-    border-color: transparent #202C33 transparent transparent;
-  }
-  /* Rabo da bolha — user (direita) */
-  .bubble.user {
-    background: #005C4B;
-    border-radius: 7.5px 0 7.5px 7.5px;
-  }
-  .bubble.user::after {
-    content: "";
-    position: absolute;
-    top: 0; right: -8px;
-    width: 0; height: 0;
-    border-style: solid;
-    border-width: 9px 9px 0 0;
-    border-color: #005C4B transparent transparent transparent;
-  }
-  .bubble.ok  { background: #0d2e1a; border-radius: 8px; border: 1px solid #25D36655; text-align: center; padding: 5px 12px; }
-  .bubble.err { background: #2e0d0d; border-radius: 8px; border: 1px solid #e74c3c55; text-align: center; padding: 5px 12px; }
-
-  /* TEXTO DA BOLHA — WhatsApp usa ~14.2px */
-  .bubble-text {
-    color: #E9EDEF;
-    font-size: 16px;
-    line-height: 22px;
-    word-break: break-word;
-    white-space: pre-wrap;
-    padding-right: 4px;
-    /* Espaço para o meta (hora+tick) não sobrepor o texto */
-    display: inline;
-  }
-  /* Hack WhatsApp: o meta fica numa linha fantasma ao lado */
-  .bubble-inner {
-    display: block;
-    overflow: hidden;
-  }
-  /* Formatação WhatsApp */
-  .bubble-text strong  { font-weight: 700; }
-  .bubble-text em      { font-style: italic; }
-  .bubble-text del     { text-decoration: line-through; opacity: .85; }
-  .bubble-text code    { font-family: 'Courier New', 'Lucida Console', monospace; font-size: 13.5px; letter-spacing: -.2px; }
-  .bubble-text .wa-code-block {
-    display: block;
-    background: rgba(0,0,0,.18);
-    border-radius: 4px;
-    padding: 3px 6px;
-    margin: 2px 0;
-    white-space: pre;
-    overflow-x: auto;
-    font-size: 13px;
-  }
-
-  /* META (hora + ticks) — flutua para baixo-direita igual WhatsApp */
-  .bubble-meta-wrap {
-    display: flex;
-    align-items: flex-end;
-    justify-content: flex-end;
-    float: right;
-    margin-left: 6px;
-    margin-bottom: -3px;
-    margin-top: 1px;
-    gap: 2px;
-    white-space: nowrap;
-    position: relative;
-    bottom: -2px;
-  }
+  .bubble { padding: 6px 7px 4px 9px; max-width: 100%; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,.36); word-wrap: break-word; }
+  .bubble.bot  { background: #202C33; border-radius: 0 7.5px 7.5px 7.5px; }
+  .bubble.bot::before { content: ""; position: absolute; top: 0; left: -8px; border-style: solid; border-width: 0 9px 9px 0; border-color: transparent #202C33 transparent transparent; }
+  .bubble.user { background: #005C4B; border-radius: 7.5px 0 7.5px 7.5px; }
+  .bubble.user::after { content: ""; position: absolute; top: 0; right: -8px; border-style: solid; border-width: 9px 9px 0 0; border-color: #005C4B transparent transparent transparent; }
+  .bubble-text { color: #E9EDEF; font-size: 15px; line-height: 21px; word-break: break-word; white-space: pre-wrap; }
+  .bubble-meta-wrap { display: flex; align-items: flex-end; justify-content: flex-end; float: right; margin-left: 6px; margin-bottom: -3px; margin-top: 1px; gap: 2px; white-space: nowrap; }
   .bubble-time  { color: rgba(134,150,160,.9); font-size: 11px; line-height: 15px; }
-  .bubble-check { color: #53BDEB; font-size: 14px; line-height: 14px; margin-bottom: -1px; }
-
-  /* TYPING */
+  .bubble-check { color: #53BDEB; font-size: 14px; line-height: 14px; }
+  .confirm-btns { display: flex; gap: 8px; margin-top: 10px; }
+  .confirm-btns button { flex: 1; padding: 9px; border: none; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .btn-confirmar { background: #25D366; color: white; }
+  .btn-cancelar  { background: #3D4A50; color: #E9EDEF; }
   #typing { display: none; align-items: flex-end; gap: 5px; margin: 2px 0 4px; padding-left: 8px; }
-  #typing .bot-avatar { font-size: 16px; width: 32px; height: 32px; }
   .typing-bubble { background: #202C33; border-radius: 0 7.5px 7.5px 7.5px; padding: 9px 14px; display: flex; gap: 4px; align-items: center; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,.36); }
-  .typing-bubble::before { content:""; position:absolute; top:0; left:-8px; width:0; height:0; border-style:solid; border-width:0 9px 9px 0; border-color:transparent #202C33 transparent transparent; }
+  .typing-bubble::before { content:""; position:absolute; top:0; left:-8px; border-style:solid; border-width:0 9px 9px 0; border-color:transparent #202C33 transparent transparent; }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: #8696A0; animation: bounce 1.2s infinite; }
   .dot:nth-child(2) { animation-delay: .2s; }
   .dot:nth-child(3) { animation-delay: .4s; }
-
-  /* INPUT BAR */
   #input-bar { background: #0B141A; padding: 8px 10px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; z-index: 10; }
   #input-wrap { flex: 1; display: flex; align-items: center; background: #202C33; border-radius: 24px; padding: 0 14px; gap: 8px; min-height: 44px; }
-  .input-emoji { color: #8696A0; font-size: 22px; }
-  #msg-input { flex: 1; background: transparent; border: none; outline: none; color: #E9EDEF; font-size: 15px; padding: 10px 0; font-family: inherit; max-height: 120px; resize: none; }
+  #msg-input { flex: 1; background: transparent; border: none; outline: none; color: #E9EDEF; font-size: 15px; padding: 10px 0; font-family: inherit; resize: none; }
   #msg-input::placeholder { color: #8696A0; }
-  #send-btn { width: 48px; height: 48px; border-radius: 50%; background: #202C33; border: none; cursor: default; display: flex; align-items: center; justify-content: center; font-size: 22px; transition: background .2s, transform .1s; flex-shrink: 0; color: #8696A0; }
-  #send-btn.active { background: #00A884; cursor: pointer; color: #fff; transform: scale(1.02); }
-
-  /* LOADING */
-  #loading-overlay { position: fixed; inset: 0; background: #0B141A; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 100; }
-  .loading-logo { width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #25D366, #128C7E); display: flex; align-items: center; justify-content: center; font-size: 36px; box-shadow: 0 0 40px rgba(37,211,102,.3); animation: pulse 2s ease-in-out infinite; }
-  .loading-text { color: #8696A0; font-size: 14px; }
-
-  @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes pulse { 0%, 100% { box-shadow: 0 0 20px rgba(37,211,102,.2); } 50% { box-shadow: 0 0 50px rgba(37,211,102,.5); } }
-  @keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
-  .shake { animation: shake .4s ease; }
-  @keyframes micPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.3); } }
-  #mic-btn.gravando { animation: micPulse .7s ease-in-out infinite; color: #f87171 !important; }
+  #send-btn { width: 48px; height: 48px; border-radius: 50%; background: #202C33; border: none; cursor: default; display: flex; align-items: center; justify-content: center; font-size: 22px; transition: background .2s; flex-shrink: 0; color: #8696A0; }
+  #send-btn.active { background: #00A884; cursor: pointer; color: #fff; }
+  .toast-row { display:flex; justify-content:center; margin: 4px 8px 6px; animation: fadeUp .18s ease; }
+  .toast-pill { background: rgba(22,101,52,0.35); border: 1.5px solid #16a34a; border-radius: 14px; padding: 9px 16px; color: #4ade80; font-size: 14.5px; font-weight: 500; text-align:center; line-height:1.4; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+  .toast-clicavel { cursor: pointer; transition: background .15s, transform .1s; }
+  .toast-clicavel:active { background: rgba(22,101,52,0.6); transform: scale(0.97); }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)} }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
 </style>
 </head>
 <body>
-
-<div id="loading-overlay" style="display:none;">
-  <div class="loading-logo">👩‍💼</div>
-  <div class="loading-text" id="loading-text">Carregando...</div>
-</div>
-
-<div id="login-screen">
-  <div class="login-logo">👩‍💼</div>
-  <div class="login-title">Lara Admin</div>
-  <div class="login-subtitle">O Rei da Coxinha 🍗<br>Entre com seu número para continuar</div>
-  <div class="login-card">
-    <label class="login-label">SEU NÚMERO DE WHATSAPP</label>
-    <div class="phone-input-wrap" id="phone-wrap">
-      <div class="phone-prefix">🇧🇷 +55 (81) 9</div>
-      <input id="phone-input" type="tel" inputmode="numeric" maxlength="15" placeholder="0000 0000" autocomplete="off">
-    </div>
-    <div class="phone-hint">Digite até 12 dígitos — os <strong style="color:#25D366">8 últimos</strong> serão usados</div>
-    <div id="login-error">❌ Número não encontrado. Verifique e tente novamente.</div>
-    <button id="login-btn" disabled>Entrar no chat</button>
-  </div>
-  <div class="login-footer">Apenas clientes cadastrados podem acessar.<br>Fale com a loja para se cadastrar. 😊</div>
-</div>
-
-<div id="app" style="display:none;">
+<div id="app">
   <div id="header">
-    <div class="header-avatar">👩‍💼<div class="status-dot" id="statusDot"></div></div>
+    <div class="header-avatar">&#x1F47D;<div class="status-dot" id="statusDot"></div></div>
     <div class="header-info">
-      <div class="header-name">Lara &nbsp;<span class="admin-badge">ADM</span></div>
+      <div class="header-name">Dino <span style="font-size:11px;color:#c75b24;font-weight:400;">&#x25CF; ADM IA</span></div>
       <div class="header-status" id="headerStatus">online</div>
     </div>
-    <div class="header-actions">
-      <span id="tts-btn" class="on" title="Leitura em voz alta" onclick="toggleTTS()">🔊</span>
-      <span title="Recarregar dados" onclick="recarregarContexto()">🔄</span>
-      <span>⋮</span>
-    </div>
   </div>
-
   <div id="wallpaper"></div>
-
   <div id="messages">
-    <div class="date-pill"><span id="datePill">HOJE</span></div>
-    <div id="typing" style="display:none; align-items:flex-end; gap:6px; margin-bottom:4px; padding-left:8px;">
-      <div class="bot-avatar" style="width:32px;height:32px;font-size:16px;">👩‍💼</div>
+    <div class="date-pill"><span id="datePill"></span></div>
+    <div id="typing" style="display:none;">
       <div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
     </div>
   </div>
-
   <div id="input-bar">
     <div id="input-wrap">
-      <span class="input-emoji">😊</span>
       <input id="msg-input" type="text" placeholder="Mensagem" autocomplete="off">
-      <span id="mic-btn" title="Segure para falar" style="color:#8696A0;font-size:22px;cursor:pointer;transition:transform .15s;user-select:none;-webkit-user-select:none;">🎤</span>
     </div>
-    <button id="send-btn">➤</button>
+    <button id="send-btn">&#x27A4;</button>
   </div>
 </div>
-
 <script>
-// ═══════════════════════════════════════════════
-//  CONFIG
-// ═══════════════════════════════════════════════
 const SUPABASE_URL = "https://vpeyqgijajywgswmezlh.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwZXlxZ2lqYWp5d2dzd21lemxoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNTM1MDIsImV4cCI6MjA4NjgyOTUwMn0.LA5Cbof7IKWAA7l8YbCuPzANpCy0rX_Dro4l9fcDgoQ";
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const GROQ_KEY = "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";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const MODELOS = ["llama-3.3-70b-versatile","llama-3.1-8b-instant","gemma2-9b-it","mixtral-8x7b-32768"];
 
-const GROQ_API_KEY = "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";
-const GROQ_URL     = "https://api.groq.com/openai/v1/chat/completions";
+const SB_H = { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json" };
 
-// Lista de fallback — quando um atinge o limite, tenta o próximo automaticamente
-const GROQ_MODELS  = [
-  "llama-3.3-70b-versatile",       // melhor — começa aqui
-  "llama-3.1-8b-instant",          // rápido
-  "moonshotai/kimi-k2-instruct",   // kimi k2
-  "qwen/qwen3-32b",                // qwen 32b
-  "meta-llama/llama-4-scout-17b-16e-instruct", // llama 4
-  "gemma2-9b-it",                  // google gemma
-  "mixtral-8x7b-32768",            // mixtral
-  "openai/gpt-oss-120b",           // gpt oss grande
-  "openai/gpt-oss-20b",            // gpt oss pequeno
-  "grq/compound",                  // compound groq
-];
-let groqModelIndex = 0; // começa no primeiro
-
-// ═══════════════════════════════════════════════
-//  ESTADO
-// ═══════════════════════════════════════════════
-let messages     = [];
-let isLoading    = false;
-let clienteNome  = "";
-let clientePhone = "";
-let ctx = { clients: [], products: [], orders: [], configs: {}, rotas: [] };
-
-const STORAGE_PREFIX = "lara_admin_";
-const storageKey = p => STORAGE_PREFIX + p;
-function loadHistory(p)    { try { const r = localStorage.getItem(storageKey(p)); return r ? JSON.parse(r) : []; } catch { return []; } }
-function saveHistory(p, h) { try { localStorage.setItem(storageKey(p), JSON.stringify(h)); } catch {} }
-
-// ═══════════════════════════════════════════════
-//  UTILS
-// ═══════════════════════════════════════════════
-function now()       { return new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); }
-function agoraISO()  { return new Date().toLocaleString("sv-SE", { timeZone: "America/Sao_Paulo" }).replace(" ", "T"); }
-function scrollBottom(s=true) { const el=document.getElementById("messages"); el.scrollTo({top:el.scrollHeight,behavior:s?"smooth":"instant"}); }
-function setStatus(t) { document.getElementById("headerStatus").textContent=t?"digitando...":"online"; document.getElementById("statusDot").style.background=t?"#8696A0":"#25D366"; }
-function escapeHtml(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
-function brl(v) { return "R$ " + Number(v||0).toFixed(2).replace(".",","); }
-
-// ═══════════════════════════════════════════════
-//  FORMATAÇÃO WHATSAPP
-// ═══════════════════════════════════════════════
-function formatWAText(raw) {
-  // 1. Escapa HTML
-  let s = escapeHtml(raw);
-  // 2. Bloco de código: ```...``` (preserva quebras)
-  s = s.replace(/```([\s\S]*?)```/g, (_, c) =>
-    `<code class="wa-code-block">${c.trim()}</code>`);
-  // 3. Código inline: `...`
-  s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
-  // 4. Negrito: *texto* (não captura espaços nas bordas)
-  s = s.replace(/\*([^\s*][^*]*[^\s*]|\S)\*/g, '<strong>$1</strong>');
-  // 5. Itálico: _texto_
-  s = s.replace(/_([^\s_][^_]*[^\s_]|\S)_/g, '<em>$1</em>');
-  // 6. Tachado: ~texto~
-  s = s.replace(/~([^\s~][^~]*[^\s~]|\S)~/g, '<del>$1</del>');
-  // 7. Links clicáveis (http/https/www)
-  s = s.replace(/(https?:\/\/[^\s<>"]+|www\.[^\s<>"]+)/g, url => {
-    const href = url.startsWith('http') ? url : 'https://' + url;
-    return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:#53BDEB;text-decoration:underline;">${url}</a>`;
-  });
-  return s;
+async function sbGet(table, filters) {
+  let url = SUPABASE_URL + "/rest/v1/" + table + "?select=*";
+  for (const [k,v] of Object.entries(filters||{})) url += "&" + k + "=eq." + encodeURIComponent(v);
+  return (await fetch(url, { headers: SB_H })).json();
+}
+async function sbUpdate(table, match, data) {
+  let url = SUPABASE_URL + "/rest/v1/" + table + "?";
+  for (const [k,v] of Object.entries(match)) url += k + "=eq." + encodeURIComponent(v) + "&";
+  return (await fetch(url, { method:"PATCH", headers:{...SB_H, Prefer:"return=representation"}, body:JSON.stringify(data) })).json();
+}
+async function sbInsert(table, data) {
+  return (await fetch(SUPABASE_URL + "/rest/v1/" + table, { method:"POST", headers:{...SB_H, Prefer:"return=representation"}, body:JSON.stringify(data) })).json();
 }
 
-// ═══════════════════════════════════════════════
-//  TTS — LEITURA EM VOZ ALTA (igual ao cardápio)
-// ═══════════════════════════════════════════════
-let ttsEnabled = localStorage.getItem('lara_tts') === 'true';
-
-// Pré-aquece o motor de voz no primeiro toque (elimina delay)
-let vozAquecida = false;
-document.addEventListener('touchstart', () => {
-  if (vozAquecida || !('speechSynthesis' in window)) return;
-  vozAquecida = true;
-  const silencio = new SpeechSynthesisUtterance(' ');
-  silencio.volume = 0;
-  silencio.lang = 'pt-BR';
-  window.speechSynthesis.speak(silencio);
-}, { once: true });
-
-function toggleTTS() {
-  ttsEnabled = !ttsEnabled;
-  localStorage.setItem('lara_tts', ttsEnabled);
-  atualizarVisualTTS(ttsEnabled);
-  const msg = new SpeechSynthesisUtterance(ttsEnabled ? 'Ligado' : 'Desligado');
-  msg.lang = 'pt-BR';
-  msg.rate = 1;
-  msg.pitch = 1;
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(msg);
+function dataHoraSP() {
+  return new Date().toLocaleString("pt-BR", { timeZone:"America/Sao_Paulo", day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
 }
 
-function atualizarVisualTTS(ativo) {
-  const btn = document.getElementById('tts-btn');
-  if (!btn) return;
-  btn.textContent = ativo ? '🔊' : '🔇';
-  btn.classList.toggle('on', ativo);
-}
+// ── ESTADO ──
+let historico       = [];
+let ocupado         = false;
+let pendente        = null;   // pagamento aguardando confirmacao
+let pendenteSug     = null;   // sugestoes fuzzy aguardando escolha
+let clientesCache   = null;
+let ultimoPagamento = null;  // dados do último pagamento para comprovante
 
-function speakText(text) {
-  if (!ttsEnabled) return;
-  if (!('speechSynthesis' in window)) return;
-  const clean = text
-    .replace(/\[CMD:[\s\S]*?\]/g, '')
-    .replace(/[*_~`#]/g, '')
-    .trim();
-  if (!clean) return;
-  window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(clean);
-  utter.lang = 'pt-BR';
-  window.speechSynthesis.speak(utter);
-}
+// ── STORAGE LOCAL (20 dias) ──
+const STORAGE_KEY = "dino_chat_v1";
+const DIAS_SALVAR = 20;
+let   msgsSalvas  = [];   // [{role, texto, time, toast}]
+let   restaurando = false;
 
-// Aplica estado salvo ao carregar
-atualizarVisualTTS(ttsEnabled);
-
-// ═══════════════════════════════════════════════
-//  MICROFONE — segura pra gravar, solta pra enviar
-// ═══════════════════════════════════════════════
-let recognition = null;
-let micSegurando = false;
-let micTranscrito = '';   // guarda o texto capturado
-
-const micBtn = document.getElementById('mic-btn');
-
-function micIniciar(e) {
-  e.preventDefault();
-  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-    alert('Reconhecimento de voz não suportado.\nUse Chrome ou Edge.');
-    return;
-  }
-  if (micSegurando) return;
-  micSegurando = true;
-  micTranscrito = '';
-
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SR();
-  recognition.lang = 'pt-BR';
-  recognition.interimResults = false;
-  recognition.continuous = false;
-
-  micBtn.classList.add('gravando');
-  micBtn.textContent = '🔴';
-
-  // Salva o texto assim que chegar — onend usa esse valor
-  recognition.onresult = (e) => {
-    micTranscrito = e.results[0][0].transcript;
-  };
-
-  recognition.onerror = (e) => {
-    console.warn('Mic erro:', e.error);
-    micTranscrito = '';
-  };
-
-  // onend sempre roda após stop() — aqui decide o que fazer
-  recognition.onend = () => {
-    recognition = null;
-    micSegurando = false;
-    micBtn.classList.remove('gravando');
-    micBtn.textContent = '🎤';
-
-    if (micTranscrito.trim()) {
-      const input = document.getElementById('msg-input');
-      input.value = micTranscrito.trim();
-      micTranscrito = '';
-      updateSendBtn();
-      setTimeout(() => sendMessage(), 150);
-    }
-  };
-
-  recognition.start();
-}
-
-function micParar(e) {
-  e.preventDefault();
-  if (!micSegurando || !recognition) return;
-  recognition.stop(); // dispara onend depois de processar
-}
-
-// Touch (celular)
-micBtn.addEventListener('touchstart',  micIniciar, { passive: false });
-micBtn.addEventListener('touchend',    micParar,   { passive: false });
-micBtn.addEventListener('touchcancel', micParar,   { passive: false });
-
-// Mouse (desktop)
-micBtn.addEventListener('mousedown',  micIniciar);
-micBtn.addEventListener('mouseup',    micParar);
-micBtn.addEventListener('mouseleave', micParar);
-
-// ═══════════════════════════════════════════════
-//  LOGIN
-// ═══════════════════════════════════════════════
-const phoneInput = document.getElementById("phone-input");
-const loginBtn   = document.getElementById("login-btn");
-const loginError = document.getElementById("login-error");
-
-phoneInput.addEventListener("input", () => {
-  let v = phoneInput.value.replace(/\D/g,"").slice(0,12);
-  let f = ""; for (let i=0;i<v.length;i++){if(i>0&&i%4===0)f+=" ";f+=v[i];} phoneInput.value=f;
-  loginBtn.disabled = v.length < 8;
-  loginError.style.display = "none";
-});
-phoneInput.addEventListener("keydown", e => { if(e.key==="Enter"&&!loginBtn.disabled) doLogin(); });
-loginBtn.addEventListener("click", doLogin);
-
-async function doLogin() {
-  const all = phoneInput.value.replace(/\D/g,"");
-  if (all.length < 8) return;
-  const digits = all.slice(-8), full = "819"+digits;
-  loginBtn.disabled = true; loginBtn.textContent = "Verificando..."; loginError.style.display="none";
+function salvarLocal() {
+  if (restaurando) return;
   try {
-    let c = null;
-    const {data:d1} = await sb.from("clientes").select("id,name,phone").or(`phone.eq.${full},phone.eq.+55${full},phone.eq.55${full}`).limit(1);
-    if (d1?.length) c=d1[0];
-    if (!c) { const {data:d2}=await sb.from("clientes").select("id,name,phone").ilike("phone",`%${digits}`).limit(1); if(d2?.length) c=d2[0]; }
-    if (!c) { const {data:d3}=await sb.from("clientes").select("id,name,phone").ilike("phone",`%9${digits}`).limit(1); if(d3?.length) c=d3[0]; }
-    if (!c) { showLoginError(); return; }
-    clienteNome  = c.name || "Admin";
-    clientePhone = c.phone || full;
-    await iniciarChat();
-  } catch(e) { console.error("Erro login:",e); showLoginError(); }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ts: Date.now(),
+      historico,
+      msgs: msgsSalvas
+    }));
+  } catch(e) {}
 }
 
-function showLoginError() {
-  loginError.style.display="block";
-  document.getElementById("phone-wrap").classList.add("shake");
-  setTimeout(()=>document.getElementById("phone-wrap").classList.remove("shake"),500);
-  loginBtn.disabled=false; loginBtn.textContent="Entrar no chat";
+function carregarLocal() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const dados = JSON.parse(raw);
+    if (!dados.ts || Date.now() - dados.ts > DIAS_SALVAR * 86400000) {
+      localStorage.removeItem(STORAGE_KEY);
+      return false;
+    }
+    historico = dados.historico || [];
+    msgsSalvas = dados.msgs || [];
+    restaurando = true;
+    for (const m of (dados.msgs || [])) {
+      if (m.toast) addToast(m.texto, m.pagData || null);
+      else {
+        addMsg(m.role, m.texto, false, m.time);
+        if (m.cancelado) {
+          const bubbles = document.querySelectorAll(".bubble.bot");
+          const last = bubbles[bubbles.length - 1];
+          if (last) {
+            const span = document.createElement("span");
+            span.textContent = "Cancelado";
+            span.style.cssText = "display:block;color:#f87171;font-size:11px;margin-top:6px;";
+            last.appendChild(span);
+          }
+        }
+      }
+    }
+    restaurando = false;
+    return true;
+  } catch(e) { restaurando = false; return false; }
 }
 
-// ═══════════════════════════════════════════════
-//  INICIAR CHAT
-// ═══════════════════════════════════════════════
-async function iniciarChat() {
-  document.getElementById("login-screen").style.display="none";
-  document.getElementById("loading-overlay").style.display="flex";
-  document.getElementById("loading-text").textContent="Carregando dados da loja...";
-  document.getElementById("datePill").textContent =
-    new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"}).toUpperCase();
-  await carregarContexto();
-  const saved = loadHistory(clientePhone);
-  messages = saved;
-  document.getElementById("loading-overlay").style.display="none";
-  document.getElementById("app").style.display="flex";
-  if (saved.length > 0) {
-    saved.forEach(m => renderMessage(m));
+const agora = () => new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+const msgs  = () => document.getElementById("messages");
+const rolar = () => msgs().scrollTo({top:msgs().scrollHeight,behavior:"smooth"});
+
+function setStatus(t) {
+  document.getElementById("headerStatus").textContent = t ? "digitando..." : "online";
+  document.getElementById("statusDot").style.background = t ? "#8696A0" : "#25D366";
+}
+
+function addMsg(role, texto, comBotoes, _time) {
+  const t = _time || agora();
+  const row = document.createElement("div");
+  row.className = "msg-row " + (role==="user" ? "user" : "bot");
+  const meta = '<span class="bubble-meta-wrap"><span class="bubble-time">' + t + '</span>' + (role==="user"?'<span class="bubble-check">&#x2713;&#x2713;</span>':'') + '</span>';
+  let inner = '<div class="bubble ' + (role==="user"?"user":"bot") + '">' + meta + '<span class="bubble-text">' + texto + '</span>';
+  if (comBotoes) inner += '<div class="confirm-btns"><button class="btn-cancelar" onclick="cancelarPendente()">&#x2715; Cancelar</button><button class="btn-confirmar" onclick="confirmarPendente()">&#x2705; Confirmar</button></div>';
+  inner += '</div>';
+  row.innerHTML = inner;
+  msgs().insertBefore(row, document.getElementById("typing"));
+  rolar();
+  if (!restaurando) { msgsSalvas.push({role, texto, time: t, comBotoes: !!comBotoes}); salvarLocal(); }
+}
+
+function addToast(texto, pagData) {
+  const row = document.createElement("div");
+  row.className = "toast-row";
+  if (pagData) {
+    row.innerHTML = '<div class="toast-pill toast-clicavel" title="Toque para enviar comprovante no WhatsApp">🧾 ' + texto + '</div>';
+    row.querySelector(".toast-pill").addEventListener("click", () => enviarComprovanteWpp(pagData.phone, pagData.nome, pagData.valor, pagData.novoSaldo, pagData.novTk, pagData.novDi));
   } else {
-    const w = { id:Date.now(), role:"assistant", time:now(),
-      content:`Oi, ${clienteNome.split(" ")[0]}! 👩‍💼 Sou a Lara, assistente admin d'*O Rei da Coxinha*.\n\nTenho acesso total: pedidos, clientes, cardápio, rotas, configs e mais. O que precisa?` };
-    messages.push(w); renderMessage(w); saveHistory(clientePhone, messages);
+    row.innerHTML = '<div class="toast-pill">' + texto + '</div>';
   }
-  scrollBottom(false);
-  setTimeout(()=>document.getElementById("msg-input").focus(),300);
+  msgs().insertBefore(row, document.getElementById("typing"));
+  rolar();
+  if (!restaurando) { msgsSalvas.push({toast: true, texto, pagData: pagData || null}); salvarLocal(); }
 }
 
-// ═══════════════════════════════════════════════
-//  CARREGAR CONTEXTO COMPLETO
-// ═══════════════════════════════════════════════
-async function carregarContexto() {
-  try {
-    const [r1,r2,r3,r4,r5] = await Promise.all([
-      sb.from("clientes").select("id,name,phone,debt").order("name"),
-      sb.from("cardapio").select("id,name,price,price_promo,categoria,tipo,available").order("categoria").order("name"),
-      sb.from("pedidos").select("id,customer_name,customer_phone,items,total,payment_method,status,created_at").order("created_at",{ascending:false}).limit(60),
-      sb.from("configs").select("key,value"),
-      sb.from("rotas").select("*").order("nome")
-    ]);
-    ctx.clients  = r1.data || [];
-    ctx.products = r2.data || [];
-    ctx.orders   = r3.data || [];
-    ctx.rotas    = r5.data || [];
-    ctx.configs  = {};
-    (r4.data||[]).forEach(c=>{ ctx.configs[c.key]=c.value; });
-  } catch(e) { console.error("Erro contexto:",e); }
+
+async function carregarClientes() {
+  if (clientesCache) return clientesCache;
+  const data = await sbGet("clientes");
+  clientesCache = Array.isArray(data) ? data : [];
+  return clientesCache;
 }
 
-async function recarregarContexto() {
-  renderSys("🔄 Atualizando dados...", false);
-  await carregarContexto();
-  renderSys("✅ Dados atualizados!", true);
+function normStr(s) {
+  return (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
 }
 
-// ═══════════════════════════════════════════════
-//  SYSTEM PROMPT ADMIN COMPLETO
-// ═══════════════════════════════════════════════
-function buildSystemPrompt() {
-  return `Você é a Lara, assistente ADMINISTRATIVA d'O Rei da Coxinha.
-Usuário atual: ${clienteNome}
-Responda SEMPRE em português brasileiro. Seja direta e simpática.
-
-════════════════════
-COMO CONSULTAR DADOS
-════════════════════
-Você NÃO recebe dados automaticamente. Quando precisar, use QUERY antes de responder:
-[QUERY:{"table":"clientes","search":"nome ou telefone"}]
-[QUERY:{"table":"cardapio"}]
-[QUERY:{"table":"pedidos","limit":15}]
-[QUERY:{"table":"rotas"}]
-[QUERY:{"table":"configs"}]
-
-Ao receber [DATA:...] use os dados para responder ou executar a ação.
-Pode fazer múltiplas QUERYs se precisar de dados de tabelas diferentes.
-
-════════════════════
-AÇÕES NO BANCO
-════════════════════
-Inclua ao final da resposta (após consultar os dados para pegar IDs corretos):
-[CMD:{"type":"AÇÃO","data":{...}}]
-
-1.  CRIAR_PEDIDO         → {customer_name, customer_phone, items, total, payment_method}
-2.  CADASTRAR_CLIENTE    → {name, phone}
-3.  DELETAR_PEDIDO       → {pedido_id}
-4.  MARCAR_FIADO         → {pedido_id, customer_phone, total}
-5.  ZERAR_DIVIDA         → {phone}
-6.  ALTERAR_DIVIDA       → {phone, debt}
-7.  ALTERAR_DISPONIBILIDADE → {produto_id, available}
-8.  ALTERAR_PRECO        → {produto_id, price, price_promo}
-9.  CRIAR_PRODUTO        → {name, price, categoria, tipo, available}
-10. DELETAR_CLIENTE      → {phone}
-11. SALVAR_CONFIG        → {key, value}
-12. CRIAR_NOTIFICACAO    → {titulo, mensagem, destinatario_id}
-13. ATUALIZAR_NOME_CLIENTE → {phone, name}
-
-REGRAS:
-- Sempre consulte antes de agir para pegar IDs corretos
-- payment_method: "FIADO", "PAGA NA ENTREGA" ou "PAGO"
-- Nunca invente IDs
-- Confirme o que foi feito após executar`;
+// Similaridade entre dois nomes (0 a 1)
+function sim(a, b) {
+  a = normStr(a); b = normStr(b);
+  if (a === b) return 1;
+  const pa = a.split(" ")[0], pb = b.split(" ")[0];
+  if (pa === pb) return 0.95;
+  if (b.includes(a) || a.includes(b)) return 0.9;
+  // letras em comum no primeiro nome
+  let comum = 0;
+  for (const ch of pa) { if (pb.includes(ch)) comum++; }
+  return comum / Math.max(pa.length, pb.length, 1);
 }
 
-// ═══════════════════════════════════════════════
-//  CONSULTA AO SUPABASE SOB DEMANDA
-// ═══════════════════════════════════════════════
-async function executeQuery(q) {
-  const { table, search, limit } = q;
-  try {
-    if (table === "clientes") {
-      let query = sb.from("clientes").select("id,name,phone,debt").order("name");
-      if (search) query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
-      const { data, error } = await query.limit(limit || 50);
-      if (error) throw error;
-      return data.map(c => `[ID:${c.id}] ${c.name} | ${c.phone} | Dívida:${brl(c.debt)}`).join("\n") || "Nenhum cliente.";
-    }
-    if (table === "cardapio") {
-      const { data, error } = await sb.from("cardapio").select("id,name,price,price_promo,categoria,available").order("name");
-      if (error) throw error;
-      return data.map(p => {
-        const pr = p.price_promo != null ? `${brl(p.price_promo)}(promo)` : brl(p.price);
-        return `[ID:${p.id}] ${p.name} | ${pr} | ${p.categoria} | ${p.available ? "✅" : "❌"}`;
-      }).join("\n") || "Cardápio vazio.";
-    }
-    if (table === "pedidos") {
-      const { data, error } = await sb.from("pedidos").select("id,customer_name,customer_phone,total,payment_method,status,created_at").order("created_at", { ascending: false }).limit(limit || 20);
-      if (error) throw error;
-      return data.map(o => {
-        const dt = new Date(o.created_at).toLocaleString("pt-BR", { timeZone:"America/Sao_Paulo", day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" });
-        return `[ID:${o.id}] ${o.customer_name} | ${brl(o.total)} | ${o.payment_method} | ${o.status||"—"} | ${dt}`;
-      }).join("\n") || "Nenhum pedido.";
-    }
-    if (table === "rotas") {
-      const { data, error } = await sb.from("rotas").select("id,nome,horario_saida").order("nome");
-      if (error) throw error;
-      return data.map(r => `[ID:${r.id}] ${r.nome} | ${r.horario_saida||"—"}`).join("\n") || "Nenhuma rota.";
-    }
-    if (table === "configs") {
-      const { data, error } = await sb.from("configs").select("key,value");
-      if (error) throw error;
-      return data.map(c => `${c.key}: ${c.value}`).join("\n") || "Nenhuma config.";
-    }
-    return "Tabela desconhecida: " + table;
-  } catch(e) {
-    return "Erro na consulta: " + e.message;
+// Retorna { exato:true, cliente } ou { exato:false, sugestoes:[] } ou null
+function encontrarCliente(clientes, nome) {
+  const n = normStr(nome);
+  const norm = s => normStr(s);
+  let c = clientes.find(x => norm(x.name) === n);
+  if (c) return { exato:true, cliente:c };
+  c = clientes.find(x => norm(x.name).startsWith(n));
+  if (c) return { exato:true, cliente:c };
+  c = clientes.find(x => norm(x.name).includes(n));
+  if (c) return { exato:true, cliente:c };
+  // fuzzy
+  const ranked = clientes
+    .map(x => ({ cliente:x, score:sim(nome, x.name) }))
+    .filter(x => x.score >= 0.5)
+    .sort((a,b) => b.score - a.score)
+    .slice(0, 3);
+  if (ranked.length) return { exato:false, sugestoes:ranked.map(x=>x.cliente) };
+  return null;
+}
+
+// ── PAGAMENTO (identico ao ADM) ──
+async function executarPagamento(phone, val) {
+  const dados = await sbGet("clientes", { phone });
+  const c = Array.isArray(dados) ? dados[0] : null;
+  if (!c) throw new Error("Cliente nao encontrado.");
+
+  const novoSaldo = Number(c.debt||0) - val;
+  const [cfgTk, cfgDi] = await Promise.all([
+    sbGet("configs", { key:"ticket_valor_reais" }),
+    sbGet("configs", { key:"diamante_valor_reais" }),
+  ]);
+  const vTk = cfgTk[0]?.value ? Number(cfgTk[0].value) : 0;
+  const vDi = cfgDi[0]?.value ? Number(cfgDi[0].value) : 0;
+  const acum   = Number(c.total_acumulado||0) + val;
+  const novTk  = vTk > 0 ? Math.floor(acum / vTk) : 0;
+  const sobra  = vTk > 0 ? acum % vTk : acum;
+  const novDi  = vDi > 0 ? Math.floor(val / vDi) : 0;
+
+  await sbUpdate("clientes", { phone }, {
+    debt:            novoSaldo,
+    tickets:         (Number(c.tickets||0))   + novTk,
+    diamantes:       (Number(c.diamantes||0)) + novDi,
+    total_acumulado: sobra,
+  });
+
+  const dh = dataHoraSP();
+  const saldoTexto = novoSaldo > 0
+    ? "Saldo devedor restante: R$ " + novoSaldo.toFixed(2).replace(".",",")
+    : novoSaldo < 0
+      ? "Credito a favor: R$ " + Math.abs(novoSaldo).toFixed(2).replace(".",",")
+      : "Quitado";
+
+  const miolo = "──────────────────\nCliente: " + c.name + "\nData/Hora: " + dh + "\nValor pago: R$ " + val.toFixed(2).replace(".",",") + "\n" + saldoTexto + "\n──────────────────";
+  await sbInsert("notificacoes", { customer_phone:phone, tipo:"pagamento", valor:val, comprovante:miolo });
+  clientesCache = null;
+  return { nome:c.name, novoSaldo, saldoTexto, novTk, novDi };
+}
+
+// ── COMPROVANTE WHATSAPP ──
+function enviarComprovanteWpp(phone, nome, valor, novoSaldo, novTk, novDi) {
+  const dh = dataHoraSP();
+  let saldoLinha;
+  if (novoSaldo > 0)      saldoLinha = "⚠️ Saldo devedor restante: R$ " + novoSaldo.toFixed(2).replace(".",",");
+  else if (novoSaldo < 0) saldoLinha = "💚 Crédito a favor: R$ " + Math.abs(novoSaldo).toFixed(2).replace(".",",");
+  else                    saldoLinha = "✅ Conta quitada ♻️";
+
+  let extras = "";
+  if (novTk > 0 || novDi > 0) {
+    let partes = [];
+    if (novTk > 0) partes.push("🎟️ +" + novTk);
+    if (novDi > 0) partes.push("💎 +" + novDi);
+    extras = "\n" + partes.join(" ");
   }
+
+  const msg =
+    "🧾 *COMPROVANTE DE PAGAMENTO*\n" +
+    "*O Rei da Coxinha* 🍗\n" +
+    "──────────────────\n" +
+    "👤 Cliente: " + nome + "\n" +
+    "📅 Data/Hora: " + dh + "\n" +
+    "💰 Valor pago: R$ " + valor.toFixed(2).replace(".",",") + "\n\n" +
+    saldoLinha + "\n" +
+    "──────────────────" + extras + "\n" +
+    "✅ Obrigado pelo pagamento!";
+
+  const tel = String(phone).replace(/\D/g, "");
+  const link = "https://wa.me/" + (tel.startsWith("55") ? tel : "55" + tel) + "?text=" + encodeURIComponent(msg);
+  window.open(link, "_blank");
 }
 
-// ═══════════════════════════════════════════════
-//  EXECUTAR AÇÕES NO SUPABASE
-// ═══════════════════════════════════════════════
-async function executarAcao(action) {
-  const { type, data } = action;
-  switch (type) {
-
-    case "CRIAR_PEDIDO": {
-      const { error } = await sb.from("pedidos").insert({
-        customer_name:  data.customer_name,
-        customer_phone: data.customer_phone,
-        items:          data.items,
-        total:          parseFloat(data.total),
-        payment_method: data.payment_method || "FIADO",
-        created_at:     agoraISO()
-      });
-      if (error) throw error;
-      if ((data.payment_method||"FIADO")==="FIADO") {
-        const {data:cli} = await sb.from("clientes").select("debt").eq("phone",data.customer_phone).maybeSingle();
-        await sb.from("clientes").update({debt:Number(cli?.debt||0)+parseFloat(data.total)}).eq("phone",data.customer_phone);
-      }
-      return `✅ Pedido criado para *${data.customer_name}* — ${brl(data.total)}`;
-    }
-
-    case "CADASTRAR_CLIENTE": {
-      const phone = data.phone.replace(/\D/g,"");
-      const {error} = await sb.from("clientes").upsert({name:data.name,phone,debt:0,fiado:true});
-      if (error) throw error;
-      return `✅ Cliente *${data.name}* cadastrado! (${phone})`;
-    }
-
-    case "DELETAR_PEDIDO": {
-      const {error} = await sb.from("pedidos").delete().eq("id",data.pedido_id);
-      if (error) throw error;
-      return `🗑️ Pedido deletado.`;
-    }
-
-    case "MARCAR_FIADO": {
-      const {error} = await sb.from("pedidos").update({payment_method:"FIADO"}).eq("id",data.pedido_id);
-      if (error) throw error;
-      if (data.customer_phone && data.total) {
-        const {data:cli} = await sb.from("clientes").select("debt").eq("phone",data.customer_phone).maybeSingle();
-        await sb.from("clientes").update({debt:Number(cli?.debt||0)+parseFloat(data.total)}).eq("phone",data.customer_phone);
-      }
-      return `✅ Pedido marcado como *Pagar Depois*.`;
-    }
-
-    case "ZERAR_DIVIDA": {
-      const {error} = await sb.from("clientes").update({debt:0}).eq("phone",data.phone);
-      if (error) throw error;
-      return `✅ Dívida zerada para ${data.phone}.`;
-    }
-
-    case "ALTERAR_DIVIDA": {
-      const {error} = await sb.from("clientes").update({debt:parseFloat(data.debt)}).eq("phone",data.phone);
-      if (error) throw error;
-      return `✅ Dívida atualizada para ${brl(data.debt)}.`;
-    }
-
-    case "ALTERAR_DISPONIBILIDADE": {
-      const {data:p,error} = await sb.from("cardapio").update({available:data.available}).eq("id",data.produto_id).select("name").single();
-      if (error) throw error;
-      return `✅ *${p.name}* agora está ${data.available?"disponível ✅":"indisponível ❌"}.`;
-    }
-
-    case "ALTERAR_PRECO": {
-      const upd = {price:parseFloat(data.price)};
-      if (data.price_promo!==undefined) upd.price_promo = data.price_promo ? parseFloat(data.price_promo) : null;
-      const {data:p,error} = await sb.from("cardapio").update(upd).eq("id",data.produto_id).select("name").single();
-      if (error) throw error;
-      return `✅ Preço de *${p.name}* → ${brl(data.price)}${data.price_promo?" (promo: "+brl(data.price_promo)+")":""}`;
-    }
-
-    case "CRIAR_PRODUTO": {
-      const {error} = await sb.from("cardapio").insert({
-        name:data.name, price:parseFloat(data.price),
-        price_promo: data.price_promo ? parseFloat(data.price_promo) : null,
-        categoria:data.categoria||"fritos", tipo:data.tipo||"quente",
-        available:data.available!==false
-      });
-      if (error) throw error;
-      return `✅ Produto *${data.name}* adicionado ao cardápio!`;
-    }
-
-    case "DELETAR_CLIENTE": {
-      const {error} = await sb.from("clientes").delete().eq("phone",data.phone);
-      if (error) throw error;
-      return `🗑️ Cliente ${data.phone} removido.`;
-    }
-
-    case "SALVAR_CONFIG": {
-      const {data:ex} = await sb.from("configs").select("key").eq("key",data.key).maybeSingle();
-      if (ex) await sb.from("configs").update({value:data.value}).eq("key",data.key);
-      else    await sb.from("configs").insert({key:data.key,value:data.value});
-      return `✅ Config *${data.key}* = "${data.value}"`;
-    }
-
-    case "CRIAR_NOTIFICACAO": {
-      const {error} = await sb.from("notificacoes").insert({
-        titulo:data.titulo, mensagem:data.mensagem,
-        destinatario_id:data.destinatario_id||null
-      });
-      if (error) throw error;
-      return `✅ Notificação enviada: *${data.titulo}*`;
-    }
-
-    case "ATUALIZAR_NOME_CLIENTE": {
-      const {error} = await sb.from("clientes").update({name:data.name}).eq("phone",data.phone);
-      if (error) throw error;
-      return `✅ Nome atualizado para *${data.name}*.`;
-    }
-
-    default: throw new Error("Ação desconhecida: " + type);
-  }
-}
-
-// ═══════════════════════════════════════════════
-//  RENDERIZAR
-// ═══════════════════════════════════════════════
-function renderMessage(msg) {
-  const isUser = msg.role === "user";
-  const row = document.createElement("div");
-  row.className = "msg-row " + (isUser ? "user" : "bot");
-  row.id = "msg-" + msg.id;
-  const av = !isUser ? `<div class="bot-avatar">👩‍💼</div>` : "";
-  const metaHtml = `<span class="bubble-meta-wrap">
-    <span class="bubble-time">${msg.time}</span>
-    ${isUser ? '<span class="bubble-check">✓✓</span>' : ""}
-  </span>`;
-  row.innerHTML = `${av}<div class="bubble ${isUser?"user":"bot"}">
-    <div class="bubble-inner">
-      ${metaHtml}<span class="bubble-text">${formatWAText(msg.content)}</span>
-    </div>
-  </div>`;
-  document.getElementById("messages").insertBefore(row, document.getElementById("typing"));
-}
-
-function renderSys(txt, ok) {
-  const row = document.createElement("div");
-  row.className = "msg-row sys";
-  row.innerHTML = `<div class="bubble ${ok?"ok":"err"}">
-    <span class="bubble-text" style="color:${ok?"#4ade80":"#f87171"};font-size:13px;">${formatWAText(txt)}</span>
-  </div>`;
-  document.getElementById("messages").insertBefore(row, document.getElementById("typing"));
-  scrollBottom();
-}
-
-// ═══════════════════════════════════════════════
-//  ENVIAR MENSAGEM
-// ═══════════════════════════════════════════════
-async function sendMessage() {
-  const input = document.getElementById("msg-input");
-  const text  = input.value.trim();
-  if (!text || isLoading) return;
-
-  input.value = ""; updateSendBtn();
-
-  const userMsg = { id:Date.now(), role:"user", content:text, time:now() };
-  messages.push(userMsg); renderMessage(userMsg); saveHistory(clientePhone, messages);
-
-  isLoading = true; setStatus(true);
+// ── CONFIRMAR / CANCELAR ──
+async function confirmarPendente() {
+  if (!pendente) return;
+  document.querySelectorAll(".confirm-btns").forEach(el => el.remove());
+  const { cliente, valor, zerarCredito } = pendente;
+  pendente = null;
+  setStatus(true);
   document.getElementById("typing").style.display = "flex";
-  scrollBottom();
-
+  rolar();
   try {
-    // ── Função de chamada com fallback de modelo ──────────────────
-    async function chamarAPI(hist) {
-      for (let i = groqModelIndex; i < GROQ_MODELS.length; i++) {
-        const modelo = GROQ_MODELS[i];
-        const res = await fetch(GROQ_URL, {
-          method:"POST",
-          headers:{"Content-Type":"application/json","Authorization":`Bearer ${GROQ_API_KEY}`},
-          body:JSON.stringify({model:modelo, messages:hist, temperature:0.4, max_tokens:1200})
-        });
-        const apiData = await res.json();
-        if (res.ok) {
-          if (i !== groqModelIndex) { groqModelIndex = i; }
-          return apiData.choices?.[0]?.message?.content || "Pode repetir?";
-        }
-        const errMsg = apiData.error?.message || "";
-        const skip = res.status === 429
-          || errMsg.toLowerCase().includes("rate limit")
-          || errMsg.toLowerCase().includes("blocked")
-          || errMsg.toLowerCase().includes("too large")
-          || errMsg.toLowerCase().includes("reduce your message");
-        if (skip && i + 1 < GROQ_MODELS.length) {
-          continue;
-        }
-        throw new Error(errMsg || "Erro API");
-      }
-      throw new Error("Todos os modelos atingiram o limite. Tente mais tarde.");
+    if (zerarCredito) {
+      await sbUpdate("clientes", { phone: cliente.phone }, { debt: 0 });
+      clientesCache = null;
+      document.getElementById("typing").style.display = "none";
+      addToast("✅ Crédito zerado ♻️");
+      historico.push({ role:"assistant", content:"Crédito zerado." });
+    } else {
+      const res = await executarPagamento(cliente.phone, valor);
+      document.getElementById("typing").style.display = "none";
+      let toast;
+      if (res.novoSaldo > 0)      toast = "✅ Dívida atualizada para R$ " + res.novoSaldo.toFixed(2).replace(".",",");
+      else if (res.novoSaldo < 0) toast = "✅ Crédito a favor R$ " + Math.abs(res.novoSaldo).toFixed(2).replace(".",",");
+      else                        toast = "✅ Quitado ♻️";
+      if (res.novTk > 0) toast += "  +" + res.novTk + " 🎟️";
+      if (res.novDi > 0) toast += " +" + res.novDi + " 💎";
+      addToast(toast, { phone: cliente.phone, nome: res.nome, valor, novoSaldo: res.novoSaldo, novTk: res.novTk, novDi: res.novDi });
+      historico.push({ role:"assistant", content:toast });
     }
-
-    // ── Histórico base (sem dados) ────────────────────────────────
-    const hist = [
-      { role:"system", content:buildSystemPrompt() },
-      ...messages
-        .filter((m,i) => !(i===0 && m.role==="assistant"))
-        .slice(-12)
-        .map(m => ({ role: m.role==="assistant" ? "assistant" : "user", content: m.content }))
-    ];
-
-    // ── Loop: Lara consulta dados conforme precisar (máx 4 rounds) ─
-    let fullReply = "";
-    for (let round = 0; round < 4; round++) {
-      fullReply = await chamarAPI(hist);
-
-      // Verifica se tem QUERY
-      const queryRegex = /\[QUERY:(\{[\s\S]*?\})\]/g;
-      const queries = [];
-      let qm;
-      while ((qm = queryRegex.exec(fullReply)) !== null) {
-        try { queries.push(JSON.parse(qm[1])); } catch(e) {}
-      }
-
-      if (queries.length === 0) break; // sem query = resposta final
-
-      // Executa as queries e devolve resultado pra IA
-      hist.push({ role:"assistant", content: fullReply });
-      const resultados = [];
-      for (const q of queries) {
-        const resultado = await executeQuery(q);
-        resultados.push(`[DATA:${q.table}]\n${resultado}\n[/DATA]`);
-      }
-      hist.push({ role:"user", content: resultados.join("\n\n") });
-    }
-
-    // ── Processa resposta final ───────────────────────────────────
-    const cmdRegex = /\[CMD:(\{[\s\S]*?\})\]/g;
-    const acoes = [];
-    let m;
-    while ((m = cmdRegex.exec(fullReply)) !== null) {
-      try { acoes.push(JSON.parse(m[1])); } catch(e) { console.error("Parse CMD:",e); }
-    }
-
-    const displayText = fullReply
-      .replace(/\[QUERY:\{[\s\S]*?\}\]/g, "")
-      .replace(/\[CMD:\{[\s\S]*?\}\]/g, "")
-      .trim();
-
-    document.getElementById("typing").style.display = "none";
-    const botMsg = { id:Date.now()+1, role:"assistant", content:displayText, time:now() };
-    messages.push(botMsg); renderMessage(botMsg); saveHistory(clientePhone, messages);
-    speakText(displayText);
-
-    // Executa ações
-    const acoesValidas = [
-      "CRIAR_PEDIDO","CADASTRAR_CLIENTE","DELETAR_PEDIDO","MARCAR_FIADO",
-      "ZERAR_DIVIDA","ALTERAR_DIVIDA","ALTERAR_DISPONIBILIDADE","ALTERAR_PRECO",
-      "CRIAR_PRODUTO","DELETAR_CLIENTE","SALVAR_CONFIG","CRIAR_NOTIFICACAO","ATUALIZAR_NOME_CLIENTE"
-    ];
-    for (const acao of acoes) {
-      if (!acao.type || !acoesValidas.includes(acao.type)) continue;
-      try {
-        const resultado = await executarAcao(acao);
-        renderSys(resultado, true);
-      } catch(err) {
-        console.error("Erro ação:", acao.type, err);
-        renderSys(`❌ Erro: ${err.message}`, false);
-      }
-    }
-
   } catch(e) {
-    console.error("Erro Lara Admin:", e);
     document.getElementById("typing").style.display = "none";
-    renderMessage({ id:Date.now(), role:"assistant", content:"⚠️ Erro: "+(e.message||String(e)), time:now() });
+    addMsg("bot", "Erro: " + e.message);
   } finally {
-    isLoading = false; setStatus(false); scrollBottom();
+    setStatus(false);
+    ocupado = false;
   }
 }
 
-function updateSendBtn() {
-  const btn = document.getElementById("send-btn");
-  btn.classList.toggle("active", document.getElementById("msg-input").value.trim().length > 0);
+function cancelarPendente() {
+  const btns = document.querySelectorAll(".confirm-btns");
+  btns.forEach(el => {
+    const span = document.createElement("span");
+    span.textContent = "Cancelado";
+    span.style.cssText = "display:block;color:#f87171;font-size:11px;margin-top:6px;";
+    el.replaceWith(span);
+  });
+  // salva o cancelado no histórico local
+  const idx = [...msgsSalvas].map(m => m.comBotoes).lastIndexOf(true);
+  if (idx !== -1) { msgsSalvas[idx].cancelado = true; salvarLocal(); }
+  pendente = null;
+  pendenteSug = null;
+  ocupado = false;
+  historico.push({ role:"assistant", content:"Cancelado." });
 }
 
-document.getElementById("msg-input").addEventListener("input", updateSendBtn);
-document.getElementById("msg-input").addEventListener("keydown", e => {
-  if (e.key==="Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-});
-document.getElementById("send-btn").addEventListener("click", () => {
-  if (document.getElementById("send-btn").classList.contains("active")) sendMessage();
-});
+// ── IA ──
+async function detectarIntencao(texto) {
+  const system = `Voce e Lara, assistente do sistema "O Rei da Coxinha".
+Sua funcao e identificar pagamentos/quitacoes e consultas de saldo de clientes.
+Responda SOMENTE com JSON puro, sem markdown, sem explicacao.
+Se for pagamento ou quitacao: {"acao":"pagamento","cliente":"NOME","valor":NUMERO}
+Se valor nao mencionado ou for "zero/zerar/quitar/quitado", use 0: {"acao":"pagamento","cliente":"NOME","valor":0}
+Se for consulta de saldo/divida/informacoes/dados de UM cliente especifico: {"acao":"consulta","cliente":"NOME"} — use o nome do historico se nao mencionar nome novo.
+Se for pedido para listar TODOS os clientes com divida/debito/duvida (sem citar nome especifico de pessoa), ou pergunta sobre dividas/duvidas de clientes no geral: {"acao":"lista_devedores"}
+Se for pedido para listar TODOS os clientes com credito/saldo positivo (sem citar nome especifico): {"acao":"lista_credores"}
+Se nao for nenhuma das opcoes acima: {"acao":"outro","resposta":"resposta amigavel curta"}
+IMPORTANTE: o campo "cliente" deve ser SEMPRE um nome de pessoa real. NUNCA coloque frases ou textos longos no campo "cliente".
+IMPORTANTE: palavras com erro de digitacao ou voz devem ser interpretadas pelo contexto. "divida", "duvida", "devida" = divida. "crente", "cliente", "clente" = cliente. "credito", "creditu" = credito.
+Exemplos de pagamento: "Jefferson pagou 50", "maria 30 reais", "joao pagou", "lanca 25 do pedro", "quita a divida do carlos", "zera o saldo da ana", "jefferson quitado"
+Exemplos de consulta: "qual a divida do Jefferson", "quanto a Maria deve", "qual o saldo dele", "me fala do joao"
+Exemplos de lista_devedores: "quais clientes tem divida", "quem deve", "lista os devedores", "todos os clientes", "qual os clientes que tem divida", "quais tem debito", "na frente com divida", "quem esta com duvida", "quem esta devendo", "me fala de todos os clientes", "qual as duvidas", "qual as duvidas dos clientes", "quanto o cliente ta devendo", "quando os clientes deve", "quais as dividas", "me mostra as dividas", "os clientes devendo", "quanto os clientes devem", "qual a divida dos clientes", "mostre os devedores", "clientes com divida", "quem tem divida", "as duvidas dos clientes", "qual cliente deve"
+Exemplos de lista_credores: "quais clientes tem credito", "quem tem saldo positivo", "qual crente com credito", "quem esta com credito", "lista os que tem credito", "quem tem saldo a favor"`;
+
+  for (const modelo of MODELOS) {
+    try {
+      const res = await fetch(GROQ_URL, {
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer " + GROQ_KEY},
+        body:JSON.stringify({ model:modelo, messages:[{role:"system",content:system},...historico.slice(-6),{role:"user",content:texto}], temperature:0.1, max_tokens:150 })
+      });
+      const json = await res.json();
+      if (!res.ok) continue;
+      const raw = json.choices?.[0]?.message?.content || "";
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (match) {
+        const parsed = JSON.parse(match[0]);
+        if (parsed.cliente && parsed.cliente.length > 40) {
+          return { acao:"outro", resposta:"Nao entendi. Pode informar o nome do cliente?" };
+        }
+        return parsed;
+      }
+    } catch(e) { continue; }
+  }
+  return { acao:"outro", resposta:"Nao consegui processar. Tente novamente." };
+}
+
+// ── VERIFICAR SE RESPOSTA E ESCOLHA DE SUGESTAO ──
+function resolverSugestao(texto, sugestoes) {
+  const t = normStr(texto);
+  // escolha por numero
+  const num = parseInt(texto.trim());
+  if (!isNaN(num) && num >= 1 && num <= sugestoes.length) return sugestoes[num-1];
+  // escolha por nome
+  for (const s of sugestoes) {
+    if (normStr(s.name).includes(t) || t.includes(normStr(s.name.split(" ")[0]))) return s;
+  }
+  // confirmacao generica: sim, isso, ele, esse, etc
+  if (/^(sim|isso|ele|essa|esse|s|yes|confirma|pode)/.test(t)) return sugestoes[0];
+  return null;
+}
+
+// ── ENVIAR ──
+async function enviar() {
+  const input = document.getElementById("msg-input");
+  const texto = input.value.trim();
+  if (!texto) return;
+  input.value = ""; atualizarBtn();
+  addMsg("user", texto);
+  historico.push({ role:"user", content:texto });
+
+  // Se tinha sugestoes pendentes, verifica se usuario escolheu
+  if (pendenteSug) {
+    const escolha = resolverSugestao(texto, pendenteSug.sugestoes);
+    if (escolha) {
+      const valor = pendenteSug.valor;
+      pendenteSug = null;
+      const debtAtual = Number(escolha.debt||0);
+      const valorFinal = (!valor || valor <= 0) ? debtAtual : valor;
+      if (debtAtual < 0 && valorFinal <= 0) {
+        const creditoFmt = "R$ " + Math.abs(debtAtual).toFixed(2).replace(".",",");
+        const msg = escolha.name + " está com " + creditoFmt + " de crédito. Quer zerar a conta?";
+        pendente = { cliente:escolha, valor:0, zerarCredito:true };
+        addMsg("bot", msg, true);
+        historico.push({ role:"assistant", content:msg });
+        ocupado = true;
+        return;
+      }
+      if (valorFinal <= 0) {
+        addMsg("bot", escolha.name + " não tem débito em aberto.");
+        return;
+      }
+      const novoSaldo = debtAtual - valorFinal;
+      const saldoDepois = novoSaldo > 0 ? "Saldo apos: R$ " + novoSaldo.toFixed(2).replace(".",",") : novoSaldo < 0 ? "Credito apos: R$ " + Math.abs(novoSaldo).toFixed(2).replace(".",",") : "Conta quitada";
+      pendente = { cliente:escolha, valor:valorFinal };
+      const msg = "Confirmar pagamento?\n\n" + escolha.name + "\nValor: R$ " + valorFinal.toFixed(2).replace(".",",") + "\nDebito atual: R$ " + debtAtual.toFixed(2).replace(".",",") + "\n" + saldoDepois;
+      addMsg("bot", msg, true);
+      historico.push({ role:"assistant", content:msg });
+      ocupado = true;
+      return;
+    } else {
+      // Nao reconheceu escolha — cancela sugestao e reprocessa como nova mensagem
+      pendenteSug = null;
+      addMsg("bot", "Ok, entendido.");
+      historico.push({ role:"assistant", content:"Ok, entendido." });
+      // cai no fluxo normal abaixo (nao retorna)
+    }
+  }
+
+  if (ocupado) return;
+  ocupado = true;
+  setStatus(true);
+  document.getElementById("typing").style.display = "flex";
+  rolar();
+
+  try {
+    const intencao = await detectarIntencao(texto);
+
+    if (intencao.acao === "pagamento") {
+      const clientes = await carregarClientes();
+      const resultado = encontrarCliente(clientes, intencao.cliente || "");
+      const valor = Number(intencao.valor) || 0;
+
+      if (!resultado) {
+        const resp = "Nao encontrei nenhum cliente com o nome \"" + intencao.cliente + "\". Verifique o nome e tente novamente.";
+        document.getElementById("typing").style.display = "none";
+        addMsg("bot", resp);
+        historico.push({ role:"assistant", content:resp });
+        ocupado = false; setStatus(false);
+        return;
+      }
+
+      // Fuzzy — mostra sugestoes
+      if (!resultado.exato) {
+        const lista = resultado.sugestoes.map((s,i) => (i+1) + ". " + s.name).join("\n");
+        const resp = "Nao achei \"" + intencao.cliente + "\" exato. Voce quis dizer?\n\n" + lista + "\n\nResponda com o nome ou numero.";
+        document.getElementById("typing").style.display = "none";
+        addMsg("bot", resp);
+        historico.push({ role:"assistant", content:resp });
+        pendenteSug = { sugestoes:resultado.sugestoes, valor };
+        ocupado = false; setStatus(false);
+        return;
+      }
+
+      // Achou exato
+      const cliente = resultado.cliente;
+      const debtAtual = Number(cliente.debt||0);
+      const valorFinal = (!valor || valor <= 0) ? debtAtual : valor;
+
+      // Cliente tem crédito (saldo negativo) — perguntar se quer zerar
+      if (debtAtual < 0 && valorFinal <= 0) {
+        const creditoFmt = "R$ " + Math.abs(debtAtual).toFixed(2).replace(".",",");
+        const msg = cliente.name + " está com " + creditoFmt + " de crédito. Quer zerar a conta?";
+        pendente = { cliente, valor:0, zerarCredito:true };
+        document.getElementById("typing").style.display = "none";
+        addMsg("bot", msg, true);
+        historico.push({ role:"assistant", content:msg });
+        return;
+      }
+
+      if (valorFinal <= 0) {
+        const resp = cliente.name + " não tem débito em aberto.";
+        document.getElementById("typing").style.display = "none";
+        addMsg("bot", resp);
+        historico.push({ role:"assistant", content:resp });
+        ocupado = false; setStatus(false);
+        return;
+      }
+
+      const novoSaldo = debtAtual - valorFinal;
+      const saldoDepois = novoSaldo > 0 ? "Saldo apos: R$ " + novoSaldo.toFixed(2).replace(".",",") : novoSaldo < 0 ? "Credito apos: R$ " + Math.abs(novoSaldo).toFixed(2).replace(".",",") : "Conta quitada";
+      pendente = { cliente, valor:valorFinal };
+      document.getElementById("typing").style.display = "none";
+      const msg = "Confirmar pagamento?\n\n" + cliente.name + "\nValor: R$ " + valorFinal.toFixed(2).replace(".",",") + "\nDebito atual: R$ " + debtAtual.toFixed(2).replace(".",",") + "\n" + saldoDepois;
+      addMsg("bot", msg, true);
+      historico.push({ role:"assistant", content:msg });
+      // ocupado = true ate confirmar/cancelar
+
+    } else if (intencao.acao === "consulta") {
+      const clientes = await carregarClientes();
+      const nomeQuery = intencao.cliente || "";
+      const resultado = nomeQuery ? encontrarCliente(clientes, nomeQuery) : null;
+      document.getElementById("typing").style.display = "none";
+
+      if (!resultado) {
+        const resp = nomeQuery
+          ? "Nao encontrei nenhum cliente com o nome \"" + nomeQuery + "\"."
+          : "Pode me dizer o nome do cliente?";
+        addMsg("bot", resp);
+        historico.push({ role:"assistant", content:resp });
+        ocupado = false; setStatus(false);
+        return;
+      }
+
+      if (!resultado.exato) {
+        const lista = resultado.sugestoes.map((s,i) => (i+1) + ". " + s.name).join("\n");
+        const resp = "Nao achei \"" + nomeQuery + "\" exato. Voce quis dizer?\n\n" + lista + "\n\nResponda com o nome ou numero.";
+        addMsg("bot", resp);
+        historico.push({ role:"assistant", content:resp });
+        pendenteSug = { sugestoes:resultado.sugestoes, valor:0 };
+        ocupado = false; setStatus(false);
+        return;
+      }
+
+      const c = resultado.cliente;
+      const debt = Number(c.debt||0);
+      const saldoLinha = debt > 0
+        ? "Debito: R$ " + debt.toFixed(2).replace(".",",")
+        : debt < 0
+          ? "Credito: R$ " + Math.abs(debt).toFixed(2).replace(".",",")
+          : "Sem debito";
+      const resp = c.name + "\n" + saldoLinha + "\nTickets: " + (c.tickets||0) + "  Diamantes: " + (c.diamantes||0);
+      addMsg("bot", resp);
+      historico.push({ role:"assistant", content:resp });
+      ocupado = false; setStatus(false);
+
+    } else if (intencao.acao === "lista_devedores") {
+      const clientes = await carregarClientes();
+      const lista = clientes
+        .filter(c => Number(c.debt||0) > 0)
+        .sort((a,b) => Number(b.debt) - Number(a.debt));
+      document.getElementById("typing").style.display = "none";
+      let resp;
+      if (!lista.length) {
+        resp = "Nenhum cliente com dívida no momento! 🎉";
+      } else {
+        resp = "Clientes com dívida (" + lista.length + "):\n\n" +
+          lista.map((c,i) => (i+1) + ". " + c.name + " — R$ " + Number(c.debt).toFixed(2).replace(".",",")).join("\n");
+      }
+      addMsg("bot", resp);
+      historico.push({ role:"assistant", content:resp });
+      ocupado = false; setStatus(false);
+
+    } else if (intencao.acao === "lista_credores") {
+      const clientes = await carregarClientes();
+      const lista = clientes
+        .filter(c => Number(c.debt||0) < 0)
+        .sort((a,b) => Number(a.debt) - Number(b.debt));
+      document.getElementById("typing").style.display = "none";
+      let resp;
+      if (!lista.length) {
+        resp = "Nenhum cliente com crédito no momento.";
+      } else {
+        resp = "Clientes com crédito (" + lista.length + "):\n\n" +
+          lista.map((c,i) => (i+1) + ". " + c.name + " — R$ " + Math.abs(Number(c.debt)).toFixed(2).replace(".",",")).join("\n");
+      }
+      addMsg("bot", resp);
+      historico.push({ role:"assistant", content:resp });
+      ocupado = false; setStatus(false);
+
+    } else {
+      document.getElementById("typing").style.display = "none";
+      const resp = intencao.resposta || "Como posso ajudar?";
+      addMsg("bot", resp);
+      historico.push({ role:"assistant", content:resp });
+      ocupado = false; setStatus(false);
+    }
+
+  } catch(e) {
+    document.getElementById("typing").style.display = "none";
+    addMsg("bot", "Erro: " + e.message);
+    ocupado = false; setStatus(false);
+  }
+}
+
+function atualizarBtn() {
+  document.getElementById("send-btn").classList.toggle("active", document.getElementById("msg-input").value.trim().length > 0);
+}
+document.getElementById("msg-input").addEventListener("input", atualizarBtn);
+document.getElementById("msg-input").addEventListener("keydown", e => { if (e.key==="Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } });
+document.getElementById("send-btn").addEventListener("click", () => { if (document.getElementById("send-btn").classList.contains("active")) enviar(); });
+
+document.getElementById("datePill").textContent = new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"}).toUpperCase();
+
+setTimeout(() => {
+  const restaurado = carregarLocal();
+  if (!restaurado) {
+    addMsg("bot", "Ola! Sou o Dino.\n\nPor enquanto processo pagamentos.\n\nExemplos:\n- Jefferson pagou 50\n- Maria pagou\n- Lanca 25 do Joao");
+  }
+  setTimeout(() => document.getElementById("msg-input").focus(), 100);
+}, 400);
 </script>
 </body>
 </html>
