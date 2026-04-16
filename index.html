@@ -530,7 +530,10 @@ async function processarTexto(texto) {
     }
   }
 
-  if (ocupado) return;
+  if (ocupado) {
+    document.getElementById("typing").style.display = "none";
+    return;
+  }
   ocupado = true;
   setStatus(true);
   document.getElementById("typing").style.display = "flex";
@@ -850,7 +853,10 @@ async function transcribeAndSend(blob, dur) {
     }
     const json = await res.json();
     const texto = json.text?.trim();
-    if (!texto) { limpar(); return; }
+    if (!texto || texto.length < 2) { limpar(); return; }
+    // Whisper alucina frases de silencio — ignora se for ruido conhecido
+    const ALUCINACOES = /^(obrigado|obrigada|legendas?|legenda por|tchau|flw|silence|\[music\]|\(music\)|thank you|thanks|\.\.\.)[\.!,\s]*$/i;
+    if (ALUCINACOES.test(texto) && recSeconds < 3) { limpar(); return; }
     addMsg("user", texto);
     historico.push({ role:"user", content: texto });
     await processarTexto(texto);
