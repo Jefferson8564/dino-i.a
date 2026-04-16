@@ -45,34 +45,10 @@
   .dot:nth-child(2) { animation-delay: .2s; }
   .dot:nth-child(3) { animation-delay: .4s; }
   #input-bar { background: #0B141A; padding: 8px 10px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; z-index: 10; }
-  #input-wrap { flex: 1; display: flex; align-items: flex-end; background: #202C33; border-radius: 24px; padding: 0 14px; gap: 8px; min-height: 44px; }
-  #msg-input { flex: 1; background: transparent; border: none; outline: none; color: #E9EDEF; font-size: 15px; padding: 10px 0; font-family: inherit; resize: none; line-height: 21px; max-height: 120px; overflow-y: auto; display: block; }
+  #input-wrap { flex: 1; display: flex; align-items: flex-end; background: #202C33; border-radius: 24px; padding: 6px 14px; gap: 8px; min-height: 44px; }
+  #msg-input { flex: 1; background: transparent; border: none; outline: none; color: #E9EDEF; font-size: 15px; padding: 4px 0; font-family: inherit; resize: none; max-height: 120px; overflow-y: auto; line-height: 21px; }
   #msg-input::placeholder { color: #8696A0; }
-  #send-btn { width: 48px; height: 48px; border-radius: 50%; background: #202C33; border: none; cursor: default; display: flex; align-items: center; justify-content: center; font-size: 22px; transition: background .2s, transform .15s, box-shadow .15s; flex-shrink: 0; color: #8696A0; user-select: none; -webkit-user-select: none; touch-action: none; }
-  #send-btn.active { background: #00A884; cursor: pointer; color: #fff; }
-  #send-btn.recording { background: #f43f5e !important; color: #fff !important; transform: scale(1.15); box-shadow: 0 0 0 8px rgba(244,63,94,0.18); }
-  #send-btn.mic-lock  { background: #00A884 !important; color: #fff !important; }
-  #rec-bar { display: none; position: absolute; left: 0; right: 0; bottom: 0; height: 64px; background: #202C33; z-index: 20; align-items: center; padding: 0 14px; gap: 10px; border-top: 1px solid #2A3942; }
-  #rec-bar.show { display: flex; }
-  #rec-cancel { color: #f43f5e; font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 4px; white-space: nowrap; }
-  #rec-timer  { color: #f43f5e; font-size: 15px; font-weight: 700; min-width: 42px; font-variant-numeric: tabular-nums; }
-  #rec-wave   { flex: 1; display: flex; align-items: center; gap: 3px; height: 32px; overflow: hidden; }
-  #rec-wave span { display: inline-block; width: 3px; border-radius: 2px; background: #53BDEB; animation: wv 0.8s ease-in-out infinite; }
-  #rec-wave span:nth-child(2){animation-delay:.10s}#rec-wave span:nth-child(3){animation-delay:.20s}
-  #rec-wave span:nth-child(4){animation-delay:.15s}#rec-wave span:nth-child(5){animation-delay:.05s}
-  #rec-wave span:nth-child(6){animation-delay:.25s}#rec-wave span:nth-child(7){animation-delay:.30s}
-  #rec-wave span:nth-child(8){animation-delay:.12s}#rec-wave span:nth-child(9){animation-delay:.22s}
-  #rec-wave span:nth-child(10){animation-delay:.08s}
-  #rec-send { display: none; width: 44px; height: 44px; border-radius: 50%; background: #00A884; border: none; cursor: pointer; color: #fff; font-size: 20px; align-items: center; justify-content: center; flex-shrink: 0; }
-  #slide-hint { color: #8696A0; font-size: 12px; white-space: nowrap; }
-  #lock-panel { position: absolute; right: 62px; bottom: 68px; background: #202C33; border-radius: 20px; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; box-shadow: 0 2px 10px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 25; }
-  #lock-panel.show { opacity: 1; }
-  .audio-bubble { display:flex; align-items:center; gap:8px; min-width:180px; padding:2px 0; }
-  .audio-play { width:36px; height:36px; border-radius:50%; background:#00A884; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-  .audio-play svg { fill:#fff; width:14px; height:14px; }
-  .audio-waveform { flex:1; height:28px; cursor:pointer; }
-  .audio-dur { color:rgba(134,150,160,.9); font-size:11px; white-space:nowrap; }
-  @keyframes wv { 0%,100%{height:5px} 50%{height:22px} }
+  #send-btn { width: 48px; height: 48px; border-radius: 50%; background: #00A884; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; color: #fff; user-select: none; -webkit-user-select: none; }
   .toast-row { display:flex; justify-content:center; margin: 4px 8px 6px; animation: fadeUp .18s ease; }
   .toast-pill { background: rgba(22,101,52,0.35); border: 1.5px solid #16a34a; border-radius: 14px; padding: 9px 16px; color: #4ade80; font-size: 14.5px; font-weight: 500; text-align:center; line-height:1.4; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
   .toast-clicavel { cursor: pointer; transition: background .15s, transform .1s; }
@@ -98,38 +74,10 @@
     </div>
   </div>
   <div id="input-bar">
-    <button id="cancel-rec-locked-btn" onclick="cancelarGravacao()" style="display:none;background:none;border:none;font-size:22px;cursor:pointer;padding:0 4px;flex-shrink:0;">❌</button>
     <div id="input-wrap">
       <textarea id="msg-input" placeholder="Mensagem" autocomplete="off" rows="1"></textarea>
-      <div id="rec-locked-indicator" style="display:none;align-items:center;gap:8px;flex:1;padding:10px 0;">
-        <span style="color:#f43f5e;font-size:18px;">🎙️</span>
-        <span id="rec-locked-timer" style="color:#f43f5e;font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;">0:00</span>
-        <div style="flex:1;display:flex;gap:3px;align-items:center;height:24px;overflow:hidden;">
-          <span style="display:inline-block;width:3px;border-radius:2px;background:#53BDEB;animation:wv 0.8s ease-in-out infinite;"></span>
-          <span style="display:inline-block;width:3px;border-radius:2px;background:#53BDEB;animation:wv 0.8s ease-in-out .10s infinite;"></span>
-          <span style="display:inline-block;width:3px;border-radius:2px;background:#53BDEB;animation:wv 0.8s ease-in-out .20s infinite;"></span>
-          <span style="display:inline-block;width:3px;border-radius:2px;background:#53BDEB;animation:wv 0.8s ease-in-out .15s infinite;"></span>
-          <span style="display:inline-block;width:3px;border-radius:2px;background:#53BDEB;animation:wv 0.8s ease-in-out .05s infinite;"></span>
-        </div>
-      </div>
     </div>
-    <button id="send-btn" aria-label="Microfone">🎙️</button>
-  </div>
-  <!-- Barra de gravação (substitui input-bar durante gravação) -->
-  <div id="rec-bar">
-    <span id="rec-cancel" onclick="cancelarGravacao()">&#x2715; Cancelar</span>
-    <span id="rec-timer">0:00</span>
-    <div id="rec-wave">
-      <span></span><span></span><span></span><span></span><span></span>
-      <span></span><span></span><span></span><span></span><span></span>
-    </div>
-    <span id="slide-hint">&#x2190; Deslize p/ cancelar</span>
-    <button id="rec-send" onclick="pararGravacao(false)">&#x27A4;</button>
-  </div>
-  <!-- Painel de travar -->
-  <div id="lock-panel">
-    <span style="font-size:18px;">🔒</span>
-    <span style="color:#8696A0;font-size:13px;">&#x2191;</span>
+    <button id="send-btn" class="active" onclick="enviar()" aria-label="Enviar">&#x27A4;</button>
   </div>
 </div>
 <script>
@@ -484,10 +432,10 @@ async function enviar() {
   const input = document.getElementById("msg-input");
   const texto = input.value.trim();
   if (!texto) return;
-  input.value = ""; input.style.height = "auto"; atualizarBtn();
+  input.value = "";
+  input.style.height = "auto";
   addMsg("user", texto);
   historico.push({ role:"user", content:texto });
-  ocupado = false; // garante que texto digitado sempre é processado
   await processarTexto(texto);
 }
 
@@ -530,10 +478,7 @@ async function processarTexto(texto) {
     }
   }
 
-  if (ocupado) {
-    document.getElementById("typing").style.display = "none";
-    return;
-  }
+  if (ocupado) return;
   ocupado = true;
   setStatus(true);
   document.getElementById("typing").style.display = "flex";
@@ -689,238 +634,12 @@ async function processarTexto(texto) {
   }
 }
 
-// ── MICROFONE ──
-let mediaRecorder = null;
-let audioChunks = [];
-let recTimerInterval = null;
-let recSeconds = 0;
-let micLocked = false;
-let micPressTimer = null;
-let micStartY = 0;
-let micStartX = 0;
-let micCancelled = false;
-
-const sendBtn = document.getElementById("send-btn");
-const recBar  = document.getElementById("rec-bar");
-const lockPanel = document.getElementById("lock-panel");
-
-function atualizarBtn() {
-  const hasText = document.getElementById("msg-input").value.trim().length > 0;
-  sendBtn.classList.toggle("active", hasText);
-  if (hasText) {
-    sendBtn.innerHTML = "&#x27A4;";
-    sendBtn.classList.remove("recording","mic-lock");
-  } else if (!mediaRecorder || mediaRecorder.state === "inactive") {
-    sendBtn.innerHTML = "🎙️";
-  }
-}
-document.getElementById("msg-input").addEventListener("input", atualizarBtn);
 document.getElementById("msg-input").addEventListener("input", function() {
   this.style.height = "auto";
   this.style.height = Math.min(this.scrollHeight, 120) + "px";
 });
 
 
-// Iniciar gravação
-async function iniciarGravacao() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    audioChunks = [];
-    micCancelled = false;
-    micLocked = false;
-    const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
-    mediaRecorder = new MediaRecorder(stream, { mimeType });
-    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-    mediaRecorder.onstop = () => {
-      stream.getTracks().forEach(t => t.stop());
-      if (!micCancelled && audioChunks.length) enviarAudio();
-    };
-    mediaRecorder.start(100);
-    // UI
-    recSeconds = 0;
-    recBar.classList.add("show");
-    document.getElementById("input-bar").style.visibility = "hidden";
-    sendBtn.classList.add("recording");
-    sendBtn.innerHTML = "🎙️";
-    lockPanel.classList.add("show");
-    recTimerInterval = setInterval(() => {
-      recSeconds++;
-      const m = Math.floor(recSeconds/60);
-      const s = String(recSeconds%60).padStart(2,"0");
-      const txt = m + ":" + s;
-      document.getElementById("rec-timer").textContent = txt;
-      document.getElementById("rec-locked-timer").textContent = txt;
-    }, 1000);
-  } catch(e) {
-    alert("Permissão de microfone negada ou indisponível.");
-  }
-}
-
-function pararGravacao(cancelar) {
-  if (!mediaRecorder || mediaRecorder.state === "inactive") return;
-  clearInterval(recTimerInterval);
-  micCancelled = !!cancelar;
-  recBar.classList.remove("show");
-  lockPanel.classList.remove("show");
-  document.getElementById("input-bar").style.visibility = "visible";
-  // Restaura rec-bar ao estado original
-  document.getElementById("rec-wave").style.display = "";
-  document.getElementById("slide-hint").style.display = "";
-  document.getElementById("rec-send").style.display = "none";
-  sendBtn.classList.remove("recording","mic-lock","active");
-  sendBtn.innerHTML = "🎙️";
-  micLocked = false;
-  mediaRecorder.stop();
-}
-
-function cancelarGravacao() { pararGravacao(true); }
-
-async function enviarAudio() {
-  if (recSeconds < 1 || audioChunks.length === 0) return; // ignora gravações vazias
-  const blob = new Blob(audioChunks, { type: audioChunks[0]?.type || "audio/webm" });
-  const dur  = recSeconds;
-  transcribeAndSend(blob, dur);
-}
-
-function addAudioMsg(url, durSec) {
-  const t = agora();
-  const m = Math.floor(durSec/60), s = String(durSec%60).padStart(2,"0");
-  const durTxt = m + ":" + s;
-  const row = document.createElement("div");
-  row.className = "msg-row user";
-  // Waveform canvas placeholder bars
-  const bars = Array.from({length:28}, (_,i) => {
-    const h = 4 + Math.abs(Math.sin(i*0.7))*18;
-    return `<rect x="${i*6}" y="${(28-h)/2}" width="3" height="${h}" rx="1.5" fill="rgba(255,255,255,0.6)"/>`;
-  }).join("");
-  row.innerHTML = `<div class="bubble user">
-    <span class="bubble-meta-wrap"><span class="bubble-time">${t}</span><span class="bubble-check">&#x2713;&#x2713;</span></span>
-    <div class="audio-bubble">
-      <button class="audio-play" onclick="toggleAudio(this,'${url}')">
-        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-      </button>
-      <svg class="audio-waveform" viewBox="0 0 168 28" xmlns="http://www.w3.org/2000/svg">${bars}</svg>
-      <span class="audio-dur">${durTxt}</span>
-    </div>
-  </div>`;
-  msgs().insertBefore(row, document.getElementById("typing"));
-  rolar();
-  if (!restaurando) { msgsSalvas.push({role:"user", texto:"🎙️ Áudio ("+durTxt+")", time:t}); salvarLocal(); }
-}
-
-let currentAudio = null;
-function toggleAudio(btn, url) {
-  if (currentAudio && !currentAudio.paused) {
-    currentAudio.pause();
-    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="#fff" width="14" height="14"><path d="M8 5v14l11-7z"/></svg>';
-    return;
-  }
-  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-  currentAudio = new Audio(url);
-  currentAudio.play();
-  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="#fff" width="14" height="14"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
-  currentAudio.onended = () => {
-    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="#fff" width="14" height="14"><path d="M8 5v14l11-7z"/></svg>';
-  };
-}
-
-async function transcribeAndSend(blob, dur) {
-  // Tenta transcrever via Groq Whisper
-  ocupado = true; setStatus(true);
-  document.getElementById("typing").style.display = "flex"; rolar();
-  const limpar = () => {
-    document.getElementById("typing").style.display = "none";
-    ocupado = false; setStatus(false);
-  };
-  try {
-    const fd = new FormData();
-    fd.append("file", blob, "audio.webm");
-    fd.append("model", "whisper-large-v3");
-    fd.append("language", "pt");
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
-    const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-      method:"POST",
-      headers:{ Authorization:"Bearer " + GROQ_KEY },
-      body: fd,
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-    if (!res.ok) {
-      limpar();
-      addMsg("bot", "Erro ao transcrever o áudio (status " + res.status + "). Tente digitar.");
-      return;
-    }
-    const json = await res.json();
-    const texto = json.text?.trim();
-    if (!texto || texto.length < 2) { limpar(); return; }
-    // Whisper alucina frases de silencio — ignora se for ruido conhecido
-    const ALUCINACOES = /^(obrigado|obrigada|legendas?|legenda por|tchau|flw|silence|\[music\]|\(music\)|thank you|thanks|\.\.\.)[\.!,\s]*$/i;
-    if (ALUCINACOES.test(texto) && recSeconds < 3) { limpar(); return; }
-    addMsg("user", texto);
-    historico.push({ role:"user", content: texto });
-    await processarTexto(texto);
-  } catch(e) {
-    limpar();
-    const msg = e.name === "AbortError"
-      ? "Tempo esgotado ao transcrever o áudio. Verifique sua conexão ou tente digitar."
-      : "Não consegui transcrever o áudio. Tente digitar.";
-    addMsg("bot", msg);
-  }
-}
-
-// ── EVENTOS DO BOTÃO MIC (press & hold / slide up to lock) ──
-function onMicDown(e) {
-  const hasText = document.getElementById("msg-input").value.trim().length > 0;
-  if (hasText) { enviar(); return; }
-  e.preventDefault();
-  const pt = e.touches ? e.touches[0] : e;
-  micStartY = pt.clientY;
-  micStartX = pt.clientX;
-  micPressTimer = setTimeout(() => { iniciarGravacao(); }, 150);
-}
-
-function onMicMove(e) {
-  if (!mediaRecorder || mediaRecorder.state !== "recording") return;
-  e.preventDefault();
-  const pt = e.touches ? e.touches[0] : e;
-  const dy = micStartY - pt.clientY;
-  const dx = micStartX - pt.clientX;
-  // Slide para cima → travar
-  if (dy > 60 && !micLocked) {
-    micLocked = true;
-    // Mantém rec-bar mas transforma no modo travado
-    document.getElementById("rec-wave").style.display = "none";
-    document.getElementById("slide-hint").style.display = "none";
-    document.getElementById("rec-send").style.display = "flex";
-    lockPanel.classList.remove("show");
-  }
-  // Slide para esquerda → cancelar
-  if (dx > 120 && !micLocked) {
-    pararGravacao(true);
-  }
-}
-
-function onMicUp(e) {
-  clearTimeout(micPressTimer);
-  if (!mediaRecorder || mediaRecorder.state !== "recording") return;
-  if (!micLocked) pararGravacao(false); // envia
-}
-
-// Touch events
-sendBtn.addEventListener("touchstart", onMicDown, { passive: false });
-sendBtn.addEventListener("touchmove",  onMicMove,  { passive: false });
-sendBtn.addEventListener("touchend",   onMicUp,    { passive: false });
-// Mouse events (desktop)
-sendBtn.addEventListener("mousedown", onMicDown);
-document.addEventListener("mousemove", e => { if (mediaRecorder && mediaRecorder.state==="recording") onMicMove(e); });
-document.addEventListener("mouseup",   e => { clearTimeout(micPressTimer); if (mediaRecorder && mediaRecorder.state==="recording" && !micLocked) pararGravacao(false); });
-
-// Click quando travado → enviar; quando texto → enviar
-sendBtn.addEventListener("click", () => {
-  if (micLocked) { pararGravacao(false); return; }
-  if (sendBtn.classList.contains("active")) enviar();
-});
 
 document.getElementById("datePill").textContent = new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"}).toUpperCase();
 
