@@ -487,6 +487,7 @@ async function enviar() {
   input.value = ""; input.style.height = "auto"; atualizarBtn();
   addMsg("user", texto);
   historico.push({ role:"user", content:texto });
+  ocupado = false; // garante que texto digitado sempre é processado
   await processarTexto(texto);
 }
 
@@ -772,6 +773,7 @@ function pararGravacao(cancelar) {
 function cancelarGravacao() { pararGravacao(true); }
 
 async function enviarAudio() {
+  if (recSeconds < 1 || audioChunks.length === 0) return; // ignora gravações vazias
   const blob = new Blob(audioChunks, { type: audioChunks[0]?.type || "audio/webm" });
   const dur  = recSeconds;
   transcribeAndSend(blob, dur);
