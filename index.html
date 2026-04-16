@@ -823,26 +823,41 @@ async function transcribeAndSend(blob, dur) {
   // Tenta transcrever via Groq Whisper
   ocupado = true; setStatus(true);
   document.getElementById("typing").style.display = "flex"; rolar();
+  const limpar = () => {
+    document.getElementById("typing").style.display = "none";
+    ocupado = false; setStatus(false);
+  };
   try {
     const fd = new FormData();
     fd.append("file", blob, "audio.webm");
     fd.append("model", "whisper-large-v3");
     fd.append("language", "pt");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
     const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
       method:"POST",
       headers:{ Authorization:"Bearer " + GROQ_KEY },
-      body: fd
+      body: fd,
+      signal: controller.signal
     });
+    clearTimeout(timeout);
+    if (!res.ok) {
+      limpar();
+      addMsg("bot", "Erro ao transcrever o áudio (status " + res.status + "). Tente digitar.");
+      return;
+    }
     const json = await res.json();
     const texto = json.text?.trim();
-    if (!texto) { ocupado=false; setStatus(false); document.getElementById("typing").style.display="none"; return; }
+    if (!texto) { limpar(); return; }
     addMsg("user", texto);
     historico.push({ role:"user", content: texto });
     await processarTexto(texto);
   } catch(e) {
-    document.getElementById("typing").style.display = "none";
-    addMsg("bot", "Não consegui transcrever o áudio. Tente digitar.");
-    ocupado = false; setStatus(false);
+    limpar();
+    const msg = e.name === "AbortError"
+      ? "Tempo esgotado ao transcrever o áudio. Verifique sua conexão ou tente digitar."
+      : "Não consegui transcrever o áudio. Tente digitar.";
+    addMsg("bot", msg);
   }
 }
 
