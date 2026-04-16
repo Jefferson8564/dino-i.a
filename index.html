@@ -63,6 +63,7 @@
   #rec-wave span:nth-child(6){animation-delay:.25s}#rec-wave span:nth-child(7){animation-delay:.30s}
   #rec-wave span:nth-child(8){animation-delay:.12s}#rec-wave span:nth-child(9){animation-delay:.22s}
   #rec-wave span:nth-child(10){animation-delay:.08s}
+  #rec-send { display: none; width: 44px; height: 44px; border-radius: 50%; background: #00A884; border: none; cursor: pointer; color: #fff; font-size: 20px; align-items: center; justify-content: center; flex-shrink: 0; }
   #slide-hint { color: #8696A0; font-size: 12px; white-space: nowrap; }
   #lock-panel { position: absolute; right: 62px; bottom: 68px; background: #202C33; border-radius: 20px; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; box-shadow: 0 2px 10px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 25; }
   #lock-panel.show { opacity: 1; }
@@ -97,8 +98,20 @@
     </div>
   </div>
   <div id="input-bar">
+    <button id="cancel-rec-locked-btn" onclick="cancelarGravacao()" style="display:none;background:none;border:none;font-size:22px;cursor:pointer;padding:0 4px;flex-shrink:0;">❌</button>
     <div id="input-wrap">
       <textarea id="msg-input" placeholder="Mensagem" autocomplete="off" rows="1"></textarea>
+      <div id="rec-locked-indicator" style="display:none;align-items:center;gap:8px;flex:1;padding:10px 0;">
+        <span style="color:#f43f5e;font-size:18px;">🎙️</span>
+        <span id="rec-locked-timer" style="color:#f43f5e;font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;">0:00</span>
+        <div style="flex:1;display:flex;gap:3px;align-items:center;height:24px;overflow:hidden;">
+          <span style="display:inline-block;width:3px;border-radius:2px;background:#53BDEB;animation:wv 0.8s ease-in-out infinite;"></span>
+          <span style="display:inline-block;width:3px;border-radius:2px;background:#53BDEB;animation:wv 0.8s ease-in-out .10s infinite;"></span>
+          <span style="display:inline-block;width:3px;border-radius:2px;background:#53BDEB;animation:wv 0.8s ease-in-out .20s infinite;"></span>
+          <span style="display:inline-block;width:3px;border-radius:2px;background:#53BDEB;animation:wv 0.8s ease-in-out .15s infinite;"></span>
+          <span style="display:inline-block;width:3px;border-radius:2px;background:#53BDEB;animation:wv 0.8s ease-in-out .05s infinite;"></span>
+        </div>
+      </div>
     </div>
     <button id="send-btn" aria-label="Microfone">🎙️</button>
   </div>
@@ -111,6 +124,7 @@
       <span></span><span></span><span></span><span></span><span></span>
     </div>
     <span id="slide-hint">&#x2190; Deslize p/ cancelar</span>
+    <button id="rec-send" onclick="pararGravacao(false)">&#x27A4;</button>
   </div>
   <!-- Painel de travar -->
   <div id="lock-panel">
@@ -729,7 +743,9 @@ async function iniciarGravacao() {
       recSeconds++;
       const m = Math.floor(recSeconds/60);
       const s = String(recSeconds%60).padStart(2,"0");
-      document.getElementById("rec-timer").textContent = m + ":" + s;
+      const txt = m + ":" + s;
+      document.getElementById("rec-timer").textContent = txt;
+      document.getElementById("rec-locked-timer").textContent = txt;
     }, 1000);
   } catch(e) {
     alert("Permissão de microfone negada ou indisponível.");
@@ -743,7 +759,11 @@ function pararGravacao(cancelar) {
   recBar.classList.remove("show");
   lockPanel.classList.remove("show");
   document.getElementById("input-bar").style.visibility = "visible";
-  sendBtn.classList.remove("recording","mic-lock");
+  // Restaura rec-bar ao estado original
+  document.getElementById("rec-wave").style.display = "";
+  document.getElementById("slide-hint").style.display = "";
+  document.getElementById("rec-send").style.display = "none";
+  sendBtn.classList.remove("recording","mic-lock","active");
   sendBtn.innerHTML = "🎙️";
   micLocked = false;
   mediaRecorder.stop();
@@ -753,11 +773,7 @@ function cancelarGravacao() { pararGravacao(true); }
 
 async function enviarAudio() {
   const blob = new Blob(audioChunks, { type: audioChunks[0]?.type || "audio/webm" });
-  const url  = URL.createObjectURL(blob);
   const dur  = recSeconds;
-  // Mostra bolha de áudio
-  addAudioMsg(url, dur);
-  // Transcrever e enviar como texto
   transcribeAndSend(blob, dur);
 }
 
@@ -820,6 +836,7 @@ async function transcribeAndSend(blob, dur) {
     const json = await res.json();
     const texto = json.text?.trim();
     if (!texto) { ocupado=false; setStatus(false); document.getElementById("typing").style.display="none"; return; }
+    addMsg("user", texto);
     historico.push({ role:"user", content: texto });
     await processarTexto(texto);
   } catch(e) {
@@ -849,10 +866,10 @@ function onMicMove(e) {
   // Slide para cima → travar
   if (dy > 60 && !micLocked) {
     micLocked = true;
-    sendBtn.classList.remove("recording");
-    sendBtn.classList.add("mic-lock");
-    sendBtn.innerHTML = "✔️";
-    document.getElementById("slide-hint").textContent = "🔒 Travado — toque ✔️ para enviar";
+    // Mantém rec-bar mas transforma no modo travado
+    document.getElementById("rec-wave").style.display = "none";
+    document.getElementById("slide-hint").style.display = "none";
+    document.getElementById("rec-send").style.display = "flex";
     lockPanel.classList.remove("show");
   }
   // Slide para esquerda → cancelar
