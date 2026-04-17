@@ -1,655 +1,664 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>𝕕𝕚𝕟𝕠 𝕚𝕒</title>
-<meta name="theme-color" content="#0B141A">
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; overflow: hidden; }
-  body { background: #0B141A; font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', Roboto, 'Segoe UI', Arial, sans-serif; display: flex; justify-content: center; align-items: center; }
-  #app { width: 100%; max-width: 480px; height: 100dvh; display: flex; flex-direction: column; position: relative; background: #0B141A; }
-  #header { background: #111B21; padding: 10px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #2A3942; flex-shrink: 0; z-index: 10; }
-  .header-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #c75b24, #8B3E17); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; position: relative; }
-  .status-dot { position: absolute; bottom: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; background: #25D366; border: 2px solid #111B21; transition: background 0.3s; }
-  .header-info { flex: 1; }
-  .header-name { color: #E9EDEF; font-weight: 600; font-size: 15px; }
-  .header-status { color: #25D366; font-size: 12px; }
-  #wallpaper { position: absolute; inset: 61px 0 64px; background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); pointer-events: none; z-index: 0; }
-  #messages { flex: 1; overflow-y: auto; padding: 8px 0; display: flex; flex-direction: column; position: relative; z-index: 1; }
-  #messages::-webkit-scrollbar { width: 4px; }
-  #messages::-webkit-scrollbar-thumb { background: #2A3942; border-radius: 4px; }
-  .date-pill { display: flex; justify-content: center; margin: 6px 0 8px; }
-  .date-pill span { background: #1E2D36; border-radius: 8px; padding: 4px 10px; color: #8696A0; font-size: 11.5px; }
-  .msg-row { display: flex; align-items: flex-end; margin-bottom: 2px; animation: fadeUp .18s ease; }
-  .msg-row.user { justify-content: flex-end; padding-left: 52px; padding-right: 8px; }
-  .msg-row.bot  { justify-content: flex-start; padding-right: 52px; padding-left: 8px; }
-  .bubble { padding: 6px 7px 4px 9px; max-width: 100%; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,.36); word-wrap: break-word; }
-  .bubble.bot  { background: #202C33; border-radius: 0 7.5px 7.5px 7.5px; }
-  .bubble.bot::before { content: ""; position: absolute; top: 0; left: -8px; border-style: solid; border-width: 0 9px 9px 0; border-color: transparent #202C33 transparent transparent; }
-  .bubble.user { background: #005C4B; border-radius: 7.5px 0 7.5px 7.5px; }
-  .bubble.user::after { content: ""; position: absolute; top: 0; right: -8px; border-style: solid; border-width: 9px 9px 0 0; border-color: #005C4B transparent transparent transparent; }
-  .bubble-text { color: #E9EDEF; font-size: 15px; line-height: 21px; word-break: break-word; white-space: pre-wrap; }
-  .bubble-meta-wrap { display: flex; align-items: flex-end; justify-content: flex-end; float: right; margin-left: 6px; margin-bottom: -3px; margin-top: 1px; gap: 2px; white-space: nowrap; }
-  .bubble-time  { color: rgba(134,150,160,.9); font-size: 11px; line-height: 15px; }
-  .bubble-check { color: #53BDEB; font-size: 14px; line-height: 14px; }
-  .confirm-btns { display: flex; gap: 8px; margin-top: 10px; }
-  .confirm-btns button { flex: 1; padding: 9px; border: none; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; }
-  .btn-confirmar { background: #25D366; color: white; }
-  .btn-cancelar  { background: #3D4A50; color: #E9EDEF; }
-  #typing { display: none; align-items: flex-end; gap: 5px; margin: 2px 0 4px; padding-left: 8px; }
-  .typing-bubble { background: #202C33; border-radius: 0 7.5px 7.5px 7.5px; padding: 9px 14px; display: flex; gap: 4px; align-items: center; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,.36); }
-  .typing-bubble::before { content:""; position:absolute; top:0; left:-8px; border-style:solid; border-width:0 9px 9px 0; border-color:transparent #202C33 transparent transparent; }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: #8696A0; animation: bounce 1.2s infinite; }
-  .dot:nth-child(2) { animation-delay: .2s; }
-  .dot:nth-child(3) { animation-delay: .4s; }
-  #input-bar { background: #0B141A; padding: 8px 10px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; z-index: 10; }
-  #input-wrap { flex: 1; display: flex; align-items: flex-end; background: #202C33; border-radius: 24px; padding: 6px 14px; gap: 8px; min-height: 44px; }
-  #msg-input { flex: 1; background: transparent; border: none; outline: none; color: #E9EDEF; font-size: 15px; padding: 4px 0; font-family: inherit; resize: none; max-height: 120px; overflow-y: auto; line-height: 21px; }
-  #msg-input::placeholder { color: #8696A0; }
-  #send-btn { width: 48px; height: 48px; border-radius: 50%; background: #00A884; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; color: #fff; user-select: none; -webkit-user-select: none; }
-  .toast-row { display:flex; justify-content:center; margin: 4px 8px 6px; animation: fadeUp .18s ease; }
-  .toast-pill { background: rgba(22,101,52,0.35); border: 1.5px solid #16a34a; border-radius: 14px; padding: 9px 16px; color: #4ade80; font-size: 14.5px; font-weight: 500; text-align:center; line-height:1.4; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
-  .toast-clicavel { cursor: pointer; transition: background .15s, transform .1s; }
-  .toast-clicavel:active { background: rgba(22,101,52,0.6); transform: scale(0.97); }
-  @keyframes bounce { 0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)} }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Pagamento PIX 💸</title>
+    <link rel="icon" href="icone.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            min-height: 100vh;
+            background: #0d0508;
+            overflow: hidden;
+        }
+
+        /* ── TELAS ── */
+        .tela {
+            position: fixed; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 24px; gap: 0;
+            transition: opacity 0.35s;
+        }
+        .tela.oculta { opacity: 0; pointer-events: none; }
+
+        /* ── LOADING ── */
+        #telaLoading { background: #0d0508; z-index: 10; }
+        .load-logo { font-size: 64px; animation: pulse 1.2s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.1);} }
+
+        /* ── LOGIN ── */
+        #telaLogin {
+            background: #0d0508;
+            overflow-y: auto;
+        }
+        .orb {
+            position: absolute; border-radius: 50%;
+            pointer-events: none;
+        }
+        .orb1 {
+            width: 320px; height: 320px; top: -80px; left: -80px;
+            background: radial-gradient(circle, rgba(199,91,36,0.45) 0%, transparent 70%);
+            animation: orbFloat1 9s ease-in-out infinite;
+        }
+        .orb2 {
+            width: 240px; height: 240px; bottom: -50px; right: -50px;
+            background: radial-gradient(circle, rgba(241,196,15,0.25) 0%, transparent 70%);
+            animation: orbFloat2 11s ease-in-out infinite;
+        }
+        @keyframes orbFloat1 { 0%,100%{transform:translate(0,0);} 50%{transform:translate(20px,-15px);} }
+        @keyframes orbFloat2 { 0%,100%{transform:translate(0,0);} 50%{transform:translate(-15px,20px);} }
+
+        .login-card {
+            position: relative; z-index: 2;
+            width: 100%; max-width: 360px;
+            animation: cardIn 0.6s cubic-bezier(0.34,1.2,0.64,1) both;
+        }
+        @keyframes cardIn {
+            from { opacity:0; transform:translateY(40px) scale(0.95); }
+            to   { opacity:1; transform:translateY(0) scale(1); }
+        }
+
+        .login-hero { text-align: center; margin-bottom: 28px; }
+        .login-logo {
+            width: 100px; height: 100px; object-fit: contain;
+            filter: drop-shadow(0 0 24px rgba(255,140,60,0.7));
+            animation: logoFloat 3.5s ease-in-out infinite;
+            margin-bottom: 14px;
+        }
+        @keyframes logoFloat { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-12px);} }
+        .login-brand { font-size: 26px; font-weight: 900; color: white; line-height: 1.1; }
+        .login-brand span {
+            background: linear-gradient(135deg, #ffd700, #ff9500, #ff6b00);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .login-sub { font-size: 13px; color: rgba(255,255,255,0.35); margin-top: 5px; font-weight: 500; }
+
+        .login-box {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px; padding: 24px;
+        }
+
+        .field-label {
+            font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4);
+            text-transform: uppercase; letter-spacing: 1.5px;
+            display: block; margin-bottom: 8px;
+        }
+        .field-input {
+            width: 100%; padding: 15px 18px;
+            background: rgba(255,255,255,0.07);
+            border: 1.5px solid rgba(255,255,255,0.12);
+            border-radius: 14px; margin-bottom: 14px;
+            font-size: 16px; font-weight: 500;
+            color: white; outline: none;
+            -webkit-appearance: none;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+        .field-input::placeholder { color: rgba(255,255,255,0.25); }
+        .field-input:focus {
+            border-color: rgba(255,150,50,0.7);
+            box-shadow: 0 0 0 3px rgba(199,91,36,0.2);
+        }
+        .prefix-wrap { position: relative; display: flex; align-items: center; margin-bottom: 14px; }
+        .prefix-wrap .prefix {
+            position: absolute; left: 18px;
+            font-weight: 700; color: rgba(255,160,50,0.9); font-size: 15px; pointer-events: none;
+        }
+        .prefix-wrap input { padding-left: 72px !important; margin-bottom: 0; }
+
+        #nameBox { display: none; }
+
+        #loginError {
+            background: rgba(231,76,60,0.15); border: 1px solid rgba(231,76,60,0.3);
+            border-radius: 12px; padding: 10px 14px;
+            color: #ff6b6b; font-size: 13px; font-weight: 600;
+            margin-bottom: 12px; display: none;
+        }
+
+        .btn-entrar {
+            width: 100%; padding: 16px;
+            background: linear-gradient(135deg, #e8732a, #c75b24, #a84a1b);
+            color: white; border: none; border-radius: 16px;
+            font-size: 16px; font-weight: 800; cursor: pointer;
+            box-shadow: 0 8px 28px rgba(199,91,36,0.45);
+            transition: transform 0.15s;
+            position: relative; overflow: hidden;
+        }
+        .btn-entrar::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+            animation: shimmer 2.5s linear infinite;
+        }
+        @keyframes shimmer { 0%{background-position:-200% center;} 100%{background-position:200% center;} }
+        .btn-entrar:active { transform: scale(0.97); }
+        .btn-entrar:disabled { opacity: 0.65; cursor: not-allowed; }
+
+        /* ── COMPROVANTE ── */
+        #telaComprovante {
+            background: #0d0508;
+            overflow-y: auto;
+            z-index: 5;
+        }
+        .comp-card {
+            position: relative; z-index: 2;
+            width: 100%; max-width: 360px;
+            animation: cardIn 0.6s cubic-bezier(0.34,1.2,0.64,1) both;
+        }
+
+        .comp-header { text-align: center; margin-bottom: 20px; }
+        .comp-title { font-size: 24px; font-weight: 900; color: white; }
+
+        .comp-box {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px; padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        .comp-row {
+            display: flex; flex-direction: column;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .comp-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .comp-row:first-child { padding-top: 0; }
+
+        .comp-row-label {
+            font-size: 10px; font-weight: 700;
+            color: rgba(255,255,255,0.35);
+            text-transform: uppercase; letter-spacing: 1.5px;
+            margin-bottom: 3px;
+        }
+        .comp-row-value {
+            font-size: 15px; font-weight: 700; color: white;
+        }
+        .comp-valor-big {
+            font-size: 28px; font-weight: 900;
+            background: linear-gradient(135deg, #25d366, #1aad52);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        .comp-cliente-box {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px; padding: 14px 16px;
+            margin-bottom: 16px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .comp-avatar {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: linear-gradient(135deg, #e8732a, #c75b24);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; font-weight: 900; color: white; flex-shrink: 0;
+        }
+        .comp-cliente-name { font-size: 14px; font-weight: 800; color: white; }
+        .comp-cliente-debt { font-size: 12px; color: rgba(255,255,255,0.45); font-weight: 500; margin-top: 2px; }
+        .comp-cliente-debt span { color: #f39c12; font-weight: 700; }
+
+        .btn-confirmar {
+            width: 100%; padding: 16px;
+            background: linear-gradient(135deg, #25d366, #1aad52, #128a3e);
+            color: white; border: none; border-radius: 16px;
+            font-size: 16px; font-weight: 800; cursor: pointer;
+            box-shadow: 0 8px 28px rgba(37,211,102,0.4);
+            transition: transform 0.15s;
+            position: relative; overflow: hidden;
+        }
+        .btn-confirmar::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+            animation: shimmer 2.5s linear infinite;
+        }
+        .btn-confirmar:active { transform: scale(0.97); }
+        .btn-confirmar:disabled { opacity: 0.65; cursor: not-allowed; }
+
+        .comp-status {
+            text-align: center;
+            font-size: 14px; font-weight: 700;
+            width: 100%; margin-top: 16px;
+            padding: 12px 16px; border-radius: 14px;
+        }
+        .comp-status.sucesso {
+            color: #25d366;
+            background: rgba(37,211,102,0.08);
+            border: 1px solid rgba(37,211,102,0.2);
+        }
+        .comp-status.duplicado {
+            color: #e74c3c;
+            background: rgba(231,76,60,0.08);
+            border: 1px solid rgba(231,76,60,0.2);
+        }
+
+
+        /* ── SEM LINK ── */
+        #telaSemLink {
+            background: #0d0508;
+            text-align: center; gap: 16px;
+        }
+        .sem-emoji { font-size: 64px; }
+        .sem-titulo { font-size: 22px; font-weight: 900; color: white; }
+        .sem-sub { font-size: 14px; color: rgba(255,255,255,0.45); font-weight: 500; line-height: 1.6; max-width: 300px; }
+    </style>
 </head>
 <body>
-<div id="app">
-  <div id="header">
-    <div class="header-avatar">&#x1F47D;<div class="status-dot" id="statusDot"></div></div>
-    <div class="header-info">
-      <div class="header-name">𝕕𝕚𝕟𝕠 𝕚𝕒 <span style="font-size:11px;color:#c75b24;font-weight:400;">&#x25CF; administrador</span></div>
-      <div class="header-status" id="headerStatus">online</div>
-    </div>
-  </div>
-  <div id="wallpaper"></div>
-  <div id="messages">
-    <div class="date-pill"><span id="datePill"></span></div>
-    <div id="typing" style="display:none;">
-      <div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-    </div>
-  </div>
-  <div id="input-bar">
-    <div id="input-wrap">
-      <textarea id="msg-input" placeholder="Mensagem" autocomplete="off" rows="1"></textarea>
-    </div>
-    <button id="send-btn" class="active" onclick="enviar()" aria-label="Enviar">&#x27A4;</button>
-  </div>
+
+<!-- ── LOADING ── -->
+<div id="telaLoading" class="tela">
+    <div class="load-logo">💸</div>
 </div>
+
+<!-- ── LOGIN ── -->
+<div id="telaLogin" class="tela oculta">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="login-card">
+        <div class="login-hero">
+            <img src="icone.png" class="login-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+            <div style="font-size:80px;display:none;">🍗</div>
+            <div class="login-brand">O Rei da <span>Coxinha</span></div>
+            <div class="login-sub">Confirmar pagamento 💸</div>
+        </div>
+
+        <div class="login-box">
+            <div id="loginError"></div>
+
+            <label class="field-label">Seu número (WhatsApp)</label>
+            <div class="prefix-wrap">
+                <span class="prefix">📱 819</span>
+                <input id="userPhone" class="field-input" type="tel" inputmode="numeric"
+                    placeholder="9XXXX-XXXX" maxlength="10"
+                    onkeydown="if(event.key==='Enter')auth()"
+                    onblur="auth()">
+            </div>
+
+            <div id="nameBox">
+                <label class="field-label">Como você se chama?</label>
+                <input id="userName" class="field-input" type="text"
+                    placeholder="Seu nome" maxlength="40"
+                    onkeydown="if(event.key==='Enter')auth()">
+            </div>
+
+            <button id="btnLogin" class="btn-entrar" onclick="auth()" style="display:none;">
+                🚀 Entrar e Confirmar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── COMPROVANTE ── -->
+<div id="telaComprovante" class="tela oculta">
+    <div class="orb orb1" style="background:radial-gradient(circle,rgba(37,211,102,0.2) 0%,transparent 70%);"></div>
+    <div class="comp-card">
+
+        <!-- Info do cliente — TOPO -->
+        <div class="comp-cliente-box">
+            <div class="comp-avatar" id="clienteAvatar">?</div>
+            <div>
+                <div class="comp-cliente-name" id="clienteNome">—</div>
+                <div class="comp-cliente-debt">Dívida atual: <span id="clienteDebt">R$ 0,00</span></div>
+            </div>
+        </div>
+
+        <!-- Título -->
+        <div class="comp-header">
+            <div class="comp-title">Comprovante PIX</div>
+        </div>
+
+        <!-- Dados do comprovante -->
+        <div class="comp-box">
+            <div class="comp-row">
+                <div class="comp-row-label">Valor</div>
+                <div class="comp-row-value comp-valor-big" id="compValor">—</div>
+            </div>
+            <div class="comp-row">
+                <div class="comp-row-label">Data e Hora</div>
+                <div class="comp-row-value" id="compDataHora">—</div>
+            </div>
+            <div class="comp-row">
+                <div class="comp-row-label">Quem recebeu (Destino)</div>
+                <div class="comp-row-value" id="compDestino">—</div>
+            </div>
+        </div>
+
+        <div id="compStatus" class="comp-status"></div>
+    </div>
+</div>
+
+
+<!-- ── SEM LINK ── -->
+<div id="telaSemLink" class="tela oculta">
+    <div class="sem-emoji">🔗</div>
+    <div class="sem-titulo">Link inválido</div>
+    <div class="sem-sub">Este link de pagamento não contém dados válidos.</div>
+</div>
+
 <script>
-const SUPABASE_URL = "https://vpeyqgijajywgswmezlh.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwZXlxZ2lqYWp5d2dzd21lemxoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNTM1MDIsImV4cCI6MjA4NjgyOTUwMn0.LA5Cbof7IKWAA7l8YbCuPzANpCy0rX_Dro4l9fcDgoQ";
-const GROQ_KEY = "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";
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODELOS = ["llama-3.3-70b-versatile","llama-3.1-8b-instant","gemma2-9b-it","mixtral-8x7b-32768"];
+// ── CONFIG ──────────────────────────────────────────────────
+const SUPABASE_URL  = "https://vpeyqgijajywgswmezlh.supabase.co";
+const SUPABASE_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwZXlxZ2lqYWp5d2dzd21lemxoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNTM1MDIsImV4cCI6MjA4NjgyOTUwMn0.LA5Cbof7IKWAA7l8YbCuPzANpCy0rX_Dro4l9fcDgoQ";
+const PHONE_ALIASES = { "81987650178": "81986633773" };
 
-const SB_H = { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json" };
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let user     = null;
+let pixDados = null; // { valor, valorNum, data, hora, destino, plataforma }
 
-async function sbGet(table, filters) {
-  let url = SUPABASE_URL + "/rest/v1/" + table + "?select=*";
-  for (const [k,v] of Object.entries(filters||{})) url += "&" + k + "=eq." + encodeURIComponent(v);
-  return (await fetch(url, { headers: SB_H })).json();
-}
-async function sbUpdate(table, match, data) {
-  let url = SUPABASE_URL + "/rest/v1/" + table + "?";
-  for (const [k,v] of Object.entries(match)) url += k + "=eq." + encodeURIComponent(v) + "&";
-  return (await fetch(url, { method:"PATCH", headers:{...SB_H, Prefer:"return=representation"}, body:JSON.stringify(data) })).json();
-}
-async function sbInsert(table, data) {
-  return (await fetch(SUPABASE_URL + "/rest/v1/" + table, { method:"POST", headers:{...SB_H, Prefer:"return=representation"}, body:JSON.stringify(data) })).json();
-}
+// ── PARSE URL PIX ────────────────────────────────────────────
+// Formato: ?R$20,00=16/04/2026=09:54:34=JeffersonLeandro=PicPay
+function parsearURLPix() {
+    const search = decodeURIComponent(window.location.search);
+    if (!search) return null;
 
-function dataHoraSP() {
-  return new Date().toLocaleString("pt-BR", { timeZone:"America/Sao_Paulo", day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
-}
+    // Remove o '?' inicial e divide por '='
+    const raw = search.substring(1);
+    const partes = raw.split('=');
 
-// ── ESTADO ──
-let historico       = [];
-let ocupado         = false;
-let pendente        = null;   // pagamento aguardando confirmacao
-let pendenteSug     = null;   // sugestoes fuzzy aguardando escolha
-let clientesCache   = null;
-let ultimoPagamento = null;  // dados do último pagamento para comprovante
+    if (partes.length < 4) return null;
 
-// ── STORAGE LOCAL (20 dias) ──
-const STORAGE_KEY = "dino_chat_v1";
-const DIAS_SALVAR = 20;
-let   msgsSalvas  = [];   // [{role, texto, time, toast}]
-let   restaurando = false;
+    const valorRaw    = partes[0]; // ex: "R$20,00"
+    const data        = partes[1]; // ex: "16/04/2026"
+    const hora        = partes[2]; // ex: "09:54:34"
+    const nomeRaw     = partes[3]; // ex: "JeffersonLeandro"
+    const plataforma  = partes[4] || ''; // ex: "PicPay"
 
-function salvarLocal() {
-  if (restaurando) return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      ts: Date.now(),
-      historico,
-      msgs: msgsSalvas
-    }));
-  } catch(e) {}
+    // Parseia valor: "R$20,00" → 20.00
+    const valorNum = parseFloat(
+        valorRaw.replace('R$','').replace(/\./g,'').replace(',','.')
+    );
+    if (isNaN(valorNum) || valorNum <= 0) return null;
+
+    // Formata nome (CamelCase → "Jefferson Leandro")
+    const nomeFormatado = nomeRaw.replace(/([a-z])([A-Z])/g, '$1 $2');
+
+    const destino = plataforma
+        ? `${nomeFormatado} (via ${plataforma})`
+        : nomeFormatado;
+
+    return {
+        valor:      valorRaw.startsWith('R$') ? valorRaw : `R$ ${valorRaw}`,
+        valorNum,
+        data,
+        hora,
+        destino
+    };
 }
 
-function carregarLocal() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
-    const dados = JSON.parse(raw);
-    if (!dados.ts || Date.now() - dados.ts > DIAS_SALVAR * 86400000) {
-      localStorage.removeItem(STORAGE_KEY);
-      return false;
-    }
-    historico = dados.historico || [];
-    msgsSalvas = dados.msgs || [];
-    restaurando = true;
-    for (const m of (dados.msgs || [])) {
-      if (m.toast) addToast(m.texto, m.pagData || null);
-      else {
-        addMsg(m.role, m.texto, false, m.time);
-        if (m.cancelado) {
-          const bubbles = document.querySelectorAll(".bubble.bot");
-          const last = bubbles[bubbles.length - 1];
-          if (last) {
-            const span = document.createElement("span");
-            span.textContent = "Cancelado";
-            span.style.cssText = "display:block;color:#f87171;font-size:11px;margin-top:6px;";
-            last.appendChild(span);
-          }
-        }
-      }
-    }
-    restaurando = false;
-    return true;
-  } catch(e) { restaurando = false; return false; }
-}
-
-const agora = () => new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
-const msgs  = () => document.getElementById("messages");
-const rolar = () => msgs().scrollTo({top:msgs().scrollHeight,behavior:"smooth"});
-
-function setStatus(t) {
-  document.getElementById("headerStatus").textContent = t ? "digitando..." : "online";
-  document.getElementById("statusDot").style.background = t ? "#8696A0" : "#25D366";
-}
-
-function addMsg(role, texto, comBotoes, _time) {
-  const t = _time || agora();
-  const row = document.createElement("div");
-  row.className = "msg-row " + (role==="user" ? "user" : "bot");
-  const meta = '<span class="bubble-meta-wrap"><span class="bubble-time">' + t + '</span>' + (role==="user"?'<span class="bubble-check">&#x2713;&#x2713;</span>':'') + '</span>';
-  let inner = '<div class="bubble ' + (role==="user"?"user":"bot") + '">' + meta + '<span class="bubble-text">' + texto + '</span>';
-  if (comBotoes) inner += '<div class="confirm-btns"><button class="btn-cancelar" onclick="cancelarPendente()">&#x2715; Cancelar</button><button class="btn-confirmar" onclick="confirmarPendente()">&#x2705; Confirmar</button></div>';
-  inner += '</div>';
-  row.innerHTML = inner;
-  msgs().insertBefore(row, document.getElementById("typing"));
-  rolar();
-  if (!restaurando) { msgsSalvas.push({role, texto, time: t, comBotoes: !!comBotoes}); salvarLocal(); }
-}
-
-function addToast(texto, pagData) {
-  const row = document.createElement("div");
-  row.className = "toast-row";
-  if (pagData) {
-    row.innerHTML = '<div class="toast-pill toast-clicavel" title="Toque para enviar comprovante no WhatsApp">🧾 ' + texto + '</div>';
-    row.querySelector(".toast-pill").addEventListener("click", () => enviarComprovanteWpp(pagData.phone, pagData.nome, pagData.valor, pagData.novoSaldo, pagData.novTk, pagData.novDi));
-  } else {
-    row.innerHTML = '<div class="toast-pill">' + texto + '</div>';
-  }
-  msgs().insertBefore(row, document.getElementById("typing"));
-  rolar();
-  if (!restaurando) { msgsSalvas.push({toast: true, texto, pagData: pagData || null}); salvarLocal(); }
+// ── TELAS ────────────────────────────────────────────────────
+function mostrar(id) {
+    ['telaLoading','telaLogin','telaComprovante','telaSemLink'].forEach(t => {
+        document.getElementById(t).classList.add('oculta');
+    });
+    const el = document.getElementById(id);
+    el.classList.remove('oculta');
 }
 
 
-async function carregarClientes() {
-  if (clientesCache) return clientesCache;
-  const data = await sbGet("clientes");
-  clientesCache = Array.isArray(data) ? data : [];
-  return clientesCache;
+// ── ERRO DE LOGIN ─────────────────────────────────────────────
+function loginErro(msg) {
+    const el = document.getElementById('loginError');
+    el.textContent = msg;
+    el.style.display = 'block';
 }
 
-function normStr(s) {
-  return (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+// ── PREENCHER COMPROVANTE ─────────────────────────────────────
+// Retorna: null (não registrado) | { meu: true } (eu mesmo) | { meu: false, nome: "..." } (outro cliente)
+async function pixJaRegistrado() {
+    if (!pixDados || !user) return null;
+    const { data, error } = await sb
+        .from('pagamentos_pix')
+        .select('phone')
+        .eq('valor', pixDados.valorNum)
+        .eq('data_pix', pixDados.data)
+        .eq('hora_pix', pixDados.hora)
+        .maybeSingle();
+    if (error) { console.error('Erro ao checar Pix:', error); return null; }
+    if (!data) return null;
+    if (data.phone === user.phone) return { meu: true };
+
+    // Busca o nome do outro cliente
+    const { data: outro } = await sb
+        .from('clientes')
+        .select('name')
+        .eq('phone', data.phone)
+        .maybeSingle();
+    return { meu: false, nome: outro?.name || 'outro cliente' };
 }
 
-// Similaridade entre dois nomes (0 a 1)
-function sim(a, b) {
-  a = normStr(a); b = normStr(b);
-  if (a === b) return 1;
-  const pa = a.split(" ")[0], pb = b.split(" ")[0];
-  if (pa === pb) return 0.95;
-  if (b.includes(a) || a.includes(b)) return 0.9;
-  // letras em comum no primeiro nome
-  let comum = 0;
-  for (const ch of pa) { if (pb.includes(ch)) comum++; }
-  return comum / Math.max(pa.length, pb.length, 1);
+async function marcarPixRegistrado() {
+    if (!pixDados || !user) return;
+    const { error } = await sb.from('pagamentos_pix').insert({
+        phone:    user.phone,
+        valor:    pixDados.valorNum,
+        data_pix: pixDados.data,
+        hora_pix: pixDados.hora,
+        destino:  pixDados.destino,
+        adm:      false
+    });
+    if (error) console.error('Erro ao salvar Pix:', error);
 }
 
-// Retorna { exato:true, cliente } ou { exato:false, sugestoes:[] } ou null
-function encontrarCliente(clientes, nome) {
-  const n = normStr(nome);
-  const norm = s => normStr(s);
-  let c = clientes.find(x => norm(x.name) === n);
-  if (c) return { exato:true, cliente:c };
-  c = clientes.find(x => norm(x.name).startsWith(n));
-  if (c) return { exato:true, cliente:c };
-  c = clientes.find(x => norm(x.name).includes(n));
-  if (c) return { exato:true, cliente:c };
-  // fuzzy
-  const ranked = clientes
-    .map(x => ({ cliente:x, score:sim(nome, x.name) }))
-    .filter(x => x.score >= 0.5)
-    .sort((a,b) => b.score - a.score)
-    .slice(0, 3);
-  if (ranked.length) return { exato:false, sugestoes:ranked.map(x=>x.cliente) };
-  return null;
-}
+async function preencherComprovante() {
+    if (!pixDados || !user) return;
 
-// ── PAGAMENTO (identico ao ADM) ──
-async function executarPagamento(phone, val) {
-  const dados = await sbGet("clientes", { phone });
-  const c = Array.isArray(dados) ? dados[0] : null;
-  if (!c) throw new Error("Cliente nao encontrado.");
+    // Avatar (inicial do nome)
+    document.getElementById('clienteAvatar').textContent = user.name.charAt(0).toUpperCase();
+    document.getElementById('clienteNome').textContent   = user.name;
 
-  const novoSaldo = Number(c.debt||0) - val;
-  const [cfgTk, cfgDi] = await Promise.all([
-    sbGet("configs", { key:"ticket_valor_reais" }),
-    sbGet("configs", { key:"diamante_valor_reais" }),
-  ]);
-  const vTk = cfgTk[0]?.value ? Number(cfgTk[0].value) : 0;
-  const vDi = cfgDi[0]?.value ? Number(cfgDi[0].value) : 0;
-  const acum   = Number(c.total_acumulado||0) + val;
-  const novTk  = vTk > 0 ? Math.floor(acum / vTk) : 0;
-  const sobra  = vTk > 0 ? acum % vTk : acum;
-  const novDi  = vDi > 0 ? Math.floor(val / vDi) : 0;
+    const debtFmt = user.debt > 0
+        ? `R$ ${user.debt.toFixed(2).replace('.',',')}`
+        : user.debt < 0
+            ? `- R$ ${Math.abs(user.debt).toFixed(2).replace('.',',')} (crédito)`
+            : 'R$ 0,00';
+    document.getElementById('clienteDebt').textContent = debtFmt;
 
-  await sbUpdate("clientes", { phone }, {
-    debt:            novoSaldo,
-    tickets:         (Number(c.tickets||0))   + novTk,
-    diamantes:       (Number(c.diamantes||0)) + novDi,
-    total_acumulado: sobra,
-  });
+    // Dados PIX
+    document.getElementById('compValor').textContent    = pixDados.valor;
+    document.getElementById('compDataHora').textContent = `${pixDados.data} às ${pixDados.hora}`;
+    document.getElementById('compDestino').textContent  = pixDados.destino;
 
-  const dh = dataHoraSP();
-  const saldoTexto = novoSaldo > 0
-    ? "Saldo devedor restante: R$ " + novoSaldo.toFixed(2).replace(".",",")
-    : novoSaldo < 0
-      ? "Credito a favor: R$ " + Math.abs(novoSaldo).toFixed(2).replace(".",",")
-      : "Quitado";
-
-  const miolo = "──────────────────\nCliente: " + c.name + "\nData/Hora: " + dh + "\nValor pago: R$ " + val.toFixed(2).replace(".",",") + "\n" + saldoTexto + "\n──────────────────";
-  await sbInsert("notificacoes", { customer_phone:phone, tipo:"pagamento", valor:val, comprovante:miolo });
-  clientesCache = null;
-  return { nome:c.name, novoSaldo, saldoTexto, novTk, novDi };
-}
-
-// ── COMPROVANTE WHATSAPP ──
-function enviarComprovanteWpp(phone, nome, valor, novoSaldo, novTk, novDi) {
-  const dh = dataHoraSP();
-  let saldoLinha;
-  if (novoSaldo > 0)      saldoLinha = "⚠️ Saldo devedor restante: R$ " + novoSaldo.toFixed(2).replace(".",",");
-  else if (novoSaldo < 0) saldoLinha = "💚 Crédito a favor: R$ " + Math.abs(novoSaldo).toFixed(2).replace(".",",");
-  else                    saldoLinha = "✅ Conta quitada ♻️";
-
-  let extras = "";
-  if (novTk > 0 || novDi > 0) {
-    let partes = [];
-    if (novTk > 0) partes.push("🎟️ +" + novTk);
-    if (novDi > 0) partes.push("💎 +" + novDi);
-    extras = "\n" + partes.join(" ");
-  }
-
-  const msg =
-    "🧾 *COMPROVANTE DE PAGAMENTO*\n" +
-    "*O Rei da Coxinha* 🍗\n" +
-    "──────────────────\n" +
-    "👤 Cliente: " + nome + "\n" +
-    "📅 Data/Hora: " + dh + "\n" +
-    "💰 Valor pago: R$ " + valor.toFixed(2).replace(".",",") + "\n\n" +
-    saldoLinha + "\n" +
-    "──────────────────" + extras + "\n" +
-    "✅ Obrigado pelo pagamento!";
-
-  const tel = String(phone).replace(/\D/g, "");
-  const link = "https://wa.me/" + (tel.startsWith("55") ? tel : "55" + tel) + "?text=" + encodeURIComponent(msg);
-  window.open(link, "_blank");
-}
-
-// ── CONFIRMAR / CANCELAR ──
-async function confirmarPendente() {
-  if (!pendente) return;
-  document.querySelectorAll(".confirm-btns").forEach(el => el.remove());
-  const { cliente, valor, zerarCredito } = pendente;
-  pendente = null;
-  setStatus(true);
-  document.getElementById("typing").style.display = "flex";
-  rolar();
-  try {
-    if (zerarCredito) {
-      await sbUpdate("clientes", { phone: cliente.phone }, { debt: 0 });
-      clientesCache = null;
-      document.getElementById("typing").style.display = "none";
-      addToast("✅ Crédito zerado ♻️");
-      historico.push({ role:"assistant", content:"Crédito zerado." });
+    // Status
+    const status = document.getElementById('compStatus');
+    const reg = await pixJaRegistrado();
+    if (reg) {
+        status.className   = 'comp-status duplicado';
+        status.textContent = reg.meu
+            ? '❌ Pagamento já registrado ❌'
+            : `❌ Pagamento já registrado por ${reg.nome} ❌`;
     } else {
-      const res = await executarPagamento(cliente.phone, valor);
-      document.getElementById("typing").style.display = "none";
-      let toast;
-      if (res.novoSaldo > 0)      toast = "✅ Dívida atualizada para R$ " + res.novoSaldo.toFixed(2).replace(".",",");
-      else if (res.novoSaldo < 0) toast = "✅ Crédito a favor R$ " + Math.abs(res.novoSaldo).toFixed(2).replace(".",",");
-      else                        toast = "✅ Quitado ♻️";
-      if (res.novTk > 0) toast += "  +" + res.novTk + " 🎟️";
-      if (res.novDi > 0) toast += " +" + res.novDi + " 💎";
-      addToast(toast, { phone: cliente.phone, nome: res.nome, valor, novoSaldo: res.novoSaldo, novTk: res.novTk, novDi: res.novDi });
-      historico.push({ role:"assistant", content:toast });
+        status.className   = 'comp-status';
+        status.textContent = '';
     }
-  } catch(e) {
-    document.getElementById("typing").style.display = "none";
-    addMsg("bot", "Erro: " + e.message);
-  } finally {
-    setStatus(false);
-    ocupado = false;
-  }
 }
 
-function cancelarPendente() {
-  const btns = document.querySelectorAll(".confirm-btns");
-  btns.forEach(el => {
-    const span = document.createElement("span");
-    span.textContent = "Cancelado";
-    span.style.cssText = "display:block;color:#f87171;font-size:11px;margin-top:6px;";
-    el.replaceWith(span);
-  });
-  // salva o cancelado no histórico local
-  const idx = [...msgsSalvas].map(m => m.comBotoes).lastIndexOf(true);
-  if (idx !== -1) { msgsSalvas[idx].cancelado = true; salvarLocal(); }
-  pendente = null;
-  pendenteSug = null;
-  ocupado = false;
-  historico.push({ role:"assistant", content:"Cancelado." });
+// ── ANIMAÇÃO DA DÍVIDA ────────────────────────────────────────
+// Velocidade: R$4/s → 400 centavos/s → 4 centavos a cada 10ms
+function animarDivida(deStart, deEnd) {
+    const el = document.getElementById('clienteDebt');
+    let centAtual = Math.round(deStart * 100);
+    const centFinal = Math.round(deEnd * 100);
+    if (centAtual <= centFinal) return; // nada a animar
+
+    const intervalo = setInterval(() => {
+        centAtual -= 4;
+        if (centAtual <= centFinal) {
+            centAtual = centFinal;
+            clearInterval(intervalo);
+        }
+        const val = centAtual / 100;
+        el.textContent = val > 0
+            ? `R$ ${val.toFixed(2).replace('.',',')}`
+            : val < 0
+                ? `- R$ ${Math.abs(val).toFixed(2).replace('.',',')} (crédito)`
+                : 'R$ 0,00';
+    }, 10);
 }
 
-// ── IA ──
-async function detectarIntencao(texto) {
-  const system = `Voce e Lara, assistente do sistema "O Rei da Coxinha".
-Sua funcao e identificar pagamentos/quitacoes e consultas de saldo de clientes.
-Responda SOMENTE com JSON puro, sem markdown, sem explicacao.
-Se for pagamento ou quitacao: {"acao":"pagamento","cliente":"NOME","valor":NUMERO}
-Se valor nao mencionado ou for "zero/zerar/quitar/quitado", use 0: {"acao":"pagamento","cliente":"NOME","valor":0}
-Se for consulta de saldo/divida/informacoes/dados de UM cliente especifico: {"acao":"consulta","cliente":"NOME"} — use o nome do historico se nao mencionar nome novo.
-Se for pedido para listar TODOS os clientes com divida/debito/duvida (sem citar nome especifico de pessoa), ou pergunta sobre dividas/duvidas de clientes no geral: {"acao":"lista_devedores"}
-Se for pedido para listar TODOS os clientes com credito/saldo positivo (sem citar nome especifico): {"acao":"lista_credores"}
-Se nao for nenhuma das opcoes acima: {"acao":"outro","resposta":"resposta amigavel curta"}
-IMPORTANTE: o campo "cliente" deve ser SEMPRE um nome de pessoa real. NUNCA coloque frases ou textos longos no campo "cliente".
-IMPORTANTE: palavras com erro de digitacao ou voz devem ser interpretadas pelo contexto. "divida", "duvida", "devida" = divida. "crente", "cliente", "clente" = cliente. "credito", "creditu" = credito.
-Exemplos de pagamento: "Jefferson pagou 50", "maria 30 reais", "joao pagou", "lanca 25 do pedro", "quita a divida do carlos", "zera o saldo da ana", "jefferson quitado"
-Exemplos de consulta: "qual a divida do Jefferson", "quanto a Maria deve", "qual o saldo dele", "me fala do joao"
-Exemplos de lista_devedores: "quais clientes tem divida", "quem deve", "lista os devedores", "todos os clientes", "qual os clientes que tem divida", "quais tem debito", "na frente com divida", "quem esta com duvida", "quem esta devendo", "me fala de todos os clientes", "qual as duvidas", "qual as duvidas dos clientes", "quanto o cliente ta devendo", "quando os clientes deve", "quais as dividas", "me mostra as dividas", "os clientes devendo", "quanto os clientes devem", "qual a divida dos clientes", "mostre os devedores", "clientes com divida", "quem tem divida", "as duvidas dos clientes", "qual cliente deve"
-Exemplos de lista_credores: "quais clientes tem credito", "quem tem saldo positivo", "qual crente com credito", "quem esta com credito", "lista os que tem credito", "quem tem saldo a favor"`;
+// ── CONFIRMAR PAGAMENTO ───────────────────────────────────────
+async function confirmarPagamento() {
+    if (!pixDados || !user) return;
+    const reg = await pixJaRegistrado();
+    if (reg) return;
 
-  for (const modelo of MODELOS) {
+    const status = document.getElementById('compStatus');
+    status.className   = 'comp-status';
+    status.textContent = '';
+
     try {
-      const res = await fetch(GROQ_URL, {
-        method:"POST",
-        headers:{"Content-Type":"application/json","Authorization":"Bearer " + GROQ_KEY},
-        body:JSON.stringify({ model:modelo, messages:[{role:"system",content:system},...historico.slice(-6),{role:"user",content:texto}], temperature:0.1, max_tokens:150 })
-      });
-      const json = await res.json();
-      if (!res.ok) continue;
-      const raw = json.choices?.[0]?.message?.content || "";
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (match) {
-        const parsed = JSON.parse(match[0]);
-        if (parsed.cliente && parsed.cliente.length > 40) {
-          return { acao:"outro", resposta:"Nao entendi. Pode informar o nome do cliente?" };
+        // Busca debt atual (fresco do banco)
+        const { data: clienteAtual, error: errBusca } = await sb
+            .from('clientes')
+            .select('debt')
+            .eq('phone', user.phone)
+            .maybeSingle();
+
+        if (errBusca || !clienteAtual) throw new Error('Cliente não encontrado');
+
+        const debtAtual  = Number(clienteAtual.debt) || 0;
+        const novoDebt   = debtAtual - pixDados.valorNum;
+
+        // Atualiza debt
+        const { error: errUpdate } = await sb
+            .from('clientes')
+            .update({ debt: novoDebt })
+            .eq('phone', user.phone);
+
+        if (errUpdate) throw errUpdate;
+
+        // Atualiza cache local
+        user.debt = novoDebt;
+        localStorage.setItem('salgados_user', JSON.stringify(user));
+
+        // Salva o PIX no Supabase
+        await marcarPixRegistrado();
+
+        // Status de sucesso
+        status.className   = 'comp-status sucesso';
+        status.textContent = '✅ Pix registrado com sucesso ✅';
+
+        // Animação da dívida diminuindo (R$4/s)
+        animarDivida(debtAtual, novoDebt);
+
+    } catch(err) {
+        console.error('Erro ao registrar pagamento:', err);
+        status.className   = 'comp-status duplicado';
+        status.textContent = '❌ Erro ao registrar. Tente recarregar.';
+    }
+}
+
+// ── AUTH ──────────────────────────────────────────────────────
+async function auth() {
+    const btn = document.getElementById('btnLogin');
+    btn.disabled = true;
+    btn.textContent = 'Entrando...';
+    document.getElementById('loginError').style.display = 'none';
+
+    let phone;
+    const savedPhone = localStorage.getItem('salgados_phone');
+    if (savedPhone) {
+        phone = savedPhone;
+    } else {
+        let partial = document.getElementById('userPhone').value.replace(/\D/g,'');
+        if (partial.startsWith('55')) partial = partial.substring(2);
+        if (partial.length < 8) {
+            loginErro('Digite o número completo (mínimo 8 dígitos)');
+            btn.disabled = false; btn.textContent = '🚀 Entrar e Confirmar';
+            return;
         }
-        return parsed;
-      }
-    } catch(e) { continue; }
-  }
-  return { acao:"outro", resposta:"Nao consegui processar. Tente novamente." };
-}
-
-// ── VERIFICAR SE RESPOSTA E ESCOLHA DE SUGESTAO ──
-function resolverSugestao(texto, sugestoes) {
-  const t = normStr(texto);
-  // escolha por numero
-  const num = parseInt(texto.trim());
-  if (!isNaN(num) && num >= 1 && num <= sugestoes.length) return sugestoes[num-1];
-  // escolha por nome
-  for (const s of sugestoes) {
-    if (normStr(s.name).includes(t) || t.includes(normStr(s.name.split(" ")[0]))) return s;
-  }
-  // confirmacao generica: sim, isso, ele, esse, etc
-  if (/^(sim|isso|ele|essa|esse|s|yes|confirma|pode)/.test(t)) return sugestoes[0];
-  return null;
-}
-
-// ── ENVIAR ──
-async function enviar() {
-  const input = document.getElementById("msg-input");
-  const texto = input.value.trim();
-  if (!texto) return;
-  input.value = "";
-  input.style.height = "auto";
-  addMsg("user", texto);
-  historico.push({ role:"user", content:texto });
-  await processarTexto(texto);
-}
-
-async function processarTexto(texto) {
-  // Se tinha sugestoes pendentes, verifica se usuario escolheu
-  if (pendenteSug) {
-    const escolha = resolverSugestao(texto, pendenteSug.sugestoes);
-    if (escolha) {
-      const valor = pendenteSug.valor;
-      pendenteSug = null;
-      const debtAtual = Number(escolha.debt||0);
-      const valorFinal = (!valor || valor <= 0) ? debtAtual : valor;
-      if (debtAtual < 0 && valorFinal <= 0) {
-        const creditoFmt = "R$ " + Math.abs(debtAtual).toFixed(2).replace(".",",");
-        const msg = escolha.name + " está com " + creditoFmt + " de crédito. Quer zerar a conta?";
-        pendente = { cliente:escolha, valor:0, zerarCredito:true };
-        addMsg("bot", msg, true);
-        historico.push({ role:"assistant", content:msg });
-        ocupado = true;
-        return;
-      }
-      if (valorFinal <= 0) {
-        addMsg("bot", escolha.name + " não tem débito em aberto.");
-        return;
-      }
-      const novoSaldo = debtAtual - valorFinal;
-      const saldoDepois = novoSaldo > 0 ? "Saldo apos: R$ " + novoSaldo.toFixed(2).replace(".",",") : novoSaldo < 0 ? "Credito apos: R$ " + Math.abs(novoSaldo).toFixed(2).replace(".",",") : "Conta quitada";
-      pendente = { cliente:escolha, valor:valorFinal };
-      const msg = "Confirmar pagamento?\n\n" + escolha.name + "\nValor: R$ " + valorFinal.toFixed(2).replace(".",",") + "\nDebito atual: R$ " + debtAtual.toFixed(2).replace(".",",") + "\n" + saldoDepois;
-      addMsg("bot", msg, true);
-      historico.push({ role:"assistant", content:msg });
-      ocupado = true;
-      return;
-    } else {
-      // Nao reconheceu escolha — cancela sugestao e reprocessa como nova mensagem
-      pendenteSug = null;
-      addMsg("bot", "Ok, entendido.");
-      historico.push({ role:"assistant", content:"Ok, entendido." });
-      // cai no fluxo normal abaixo (nao retorna)
-    }
-  }
-
-  if (ocupado) return;
-  ocupado = true;
-  setStatus(true);
-  document.getElementById("typing").style.display = "flex";
-  rolar();
-
-  try {
-    const intencao = await detectarIntencao(texto);
-
-    if (intencao.acao === "pagamento") {
-      const clientes = await carregarClientes();
-      const resultado = encontrarCliente(clientes, intencao.cliente || "");
-      const valor = Number(intencao.valor) || 0;
-
-      if (!resultado) {
-        const resp = "Nao encontrei nenhum cliente com o nome \"" + intencao.cliente + "\". Verifique o nome e tente novamente.";
-        document.getElementById("typing").style.display = "none";
-        addMsg("bot", resp);
-        historico.push({ role:"assistant", content:resp });
-        ocupado = false; setStatus(false);
-        return;
-      }
-
-      // Fuzzy — mostra sugestoes
-      if (!resultado.exato) {
-        const lista = resultado.sugestoes.map((s,i) => (i+1) + ". " + s.name).join("\n");
-        const resp = "Nao achei \"" + intencao.cliente + "\" exato. Voce quis dizer?\n\n" + lista + "\n\nResponda com o nome ou numero.";
-        document.getElementById("typing").style.display = "none";
-        addMsg("bot", resp);
-        historico.push({ role:"assistant", content:resp });
-        pendenteSug = { sugestoes:resultado.sugestoes, valor };
-        ocupado = false; setStatus(false);
-        return;
-      }
-
-      // Achou exato
-      const cliente = resultado.cliente;
-      const debtAtual = Number(cliente.debt||0);
-      const valorFinal = (!valor || valor <= 0) ? debtAtual : valor;
-
-      // Cliente tem crédito (saldo negativo) — perguntar se quer zerar
-      if (debtAtual < 0 && valorFinal <= 0) {
-        const creditoFmt = "R$ " + Math.abs(debtAtual).toFixed(2).replace(".",",");
-        const msg = cliente.name + " está com " + creditoFmt + " de crédito. Quer zerar a conta?";
-        pendente = { cliente, valor:0, zerarCredito:true };
-        document.getElementById("typing").style.display = "none";
-        addMsg("bot", msg, true);
-        historico.push({ role:"assistant", content:msg });
-        return;
-      }
-
-      if (valorFinal <= 0) {
-        const resp = cliente.name + " não tem débito em aberto.";
-        document.getElementById("typing").style.display = "none";
-        addMsg("bot", resp);
-        historico.push({ role:"assistant", content:resp });
-        ocupado = false; setStatus(false);
-        return;
-      }
-
-      const novoSaldo = debtAtual - valorFinal;
-      const saldoDepois = novoSaldo > 0 ? "Saldo apos: R$ " + novoSaldo.toFixed(2).replace(".",",") : novoSaldo < 0 ? "Credito apos: R$ " + Math.abs(novoSaldo).toFixed(2).replace(".",",") : "Conta quitada";
-      pendente = { cliente, valor:valorFinal };
-      document.getElementById("typing").style.display = "none";
-      const msg = "Confirmar pagamento?\n\n" + cliente.name + "\nValor: R$ " + valorFinal.toFixed(2).replace(".",",") + "\nDebito atual: R$ " + debtAtual.toFixed(2).replace(".",",") + "\n" + saldoDepois;
-      addMsg("bot", msg, true);
-      historico.push({ role:"assistant", content:msg });
-      // ocupado = true ate confirmar/cancelar
-
-    } else if (intencao.acao === "consulta") {
-      const clientes = await carregarClientes();
-      const nomeQuery = intencao.cliente || "";
-      const resultado = nomeQuery ? encontrarCliente(clientes, nomeQuery) : null;
-      document.getElementById("typing").style.display = "none";
-
-      if (!resultado) {
-        const resp = nomeQuery
-          ? "Nao encontrei nenhum cliente com o nome \"" + nomeQuery + "\"."
-          : "Pode me dizer o nome do cliente?";
-        addMsg("bot", resp);
-        historico.push({ role:"assistant", content:resp });
-        ocupado = false; setStatus(false);
-        return;
-      }
-
-      if (!resultado.exato) {
-        const lista = resultado.sugestoes.map((s,i) => (i+1) + ". " + s.name).join("\n");
-        const resp = "Nao achei \"" + nomeQuery + "\" exato. Voce quis dizer?\n\n" + lista + "\n\nResponda com o nome ou numero.";
-        addMsg("bot", resp);
-        historico.push({ role:"assistant", content:resp });
-        pendenteSug = { sugestoes:resultado.sugestoes, valor:0 };
-        ocupado = false; setStatus(false);
-        return;
-      }
-
-      const c = resultado.cliente;
-      const debt = Number(c.debt||0);
-      const saldoLinha = debt > 0
-        ? "Debito: R$ " + debt.toFixed(2).replace(".",",")
-        : debt < 0
-          ? "Credito: R$ " + Math.abs(debt).toFixed(2).replace(".",",")
-          : "Sem debito";
-      const resp = c.name + "\n" + saldoLinha + "\nTickets: " + (c.tickets||0) + "  Diamantes: " + (c.diamantes||0);
-      addMsg("bot", resp);
-      historico.push({ role:"assistant", content:resp });
-      ocupado = false; setStatus(false);
-
-    } else if (intencao.acao === "lista_devedores") {
-      const clientes = await carregarClientes();
-      const lista = clientes
-        .filter(c => Number(c.debt||0) > 0)
-        .sort((a,b) => Number(b.debt) - Number(a.debt));
-      document.getElementById("typing").style.display = "none";
-      let resp;
-      if (!lista.length) {
-        resp = "Nenhum cliente com dívida no momento! 🎉";
-      } else {
-        resp = "Clientes com dívida (" + lista.length + "):\n\n" +
-          lista.map((c,i) => (i+1) + ". " + c.name + " — R$ " + Number(c.debt).toFixed(2).replace(".",",")).join("\n");
-      }
-      addMsg("bot", resp);
-      historico.push({ role:"assistant", content:resp });
-      ocupado = false; setStatus(false);
-
-    } else if (intencao.acao === "lista_credores") {
-      const clientes = await carregarClientes();
-      const lista = clientes
-        .filter(c => Number(c.debt||0) < 0)
-        .sort((a,b) => Number(a.debt) - Number(b.debt));
-      document.getElementById("typing").style.display = "none";
-      let resp;
-      if (!lista.length) {
-        resp = "Nenhum cliente com crédito no momento.";
-      } else {
-        resp = "Clientes com crédito (" + lista.length + "):\n\n" +
-          lista.map((c,i) => (i+1) + ". " + c.name + " — R$ " + Math.abs(Number(c.debt)).toFixed(2).replace(".",",")).join("\n");
-      }
-      addMsg("bot", resp);
-      historico.push({ role:"assistant", content:resp });
-      ocupado = false; setStatus(false);
-
-    } else {
-      document.getElementById("typing").style.display = "none";
-      const resp = intencao.resposta || "Como posso ajudar?";
-      addMsg("bot", resp);
-      historico.push({ role:"assistant", content:resp });
-      ocupado = false; setStatus(false);
+        partial = partial.slice(-8);
+        phone = '819' + partial;
+        if (PHONE_ALIASES[phone]) phone = PHONE_ALIASES[phone];
     }
 
-  } catch(e) {
-    document.getElementById("typing").style.display = "none";
-    addMsg("bot", "Erro: " + e.message);
-    ocupado = false; setStatus(false);
-  }
+    try {
+        let { data: client } = await sb.from('clientes').select('*').eq('phone', phone).maybeSingle();
+
+        if (!client) {
+            // Novo usuário — pedir nome
+            const nb = document.getElementById('nameBox');
+            if (nb.style.display === 'none' || nb.style.display === '') {
+                nb.style.display = 'block';
+                btn.disabled = false; btn.textContent = '🚀 Entrar e Confirmar';
+                document.getElementById('userName').focus();
+                return;
+            }
+            const name = document.getElementById('userName').value.trim();
+            if (!name) {
+                loginErro('Digite seu nome');
+                btn.disabled = false; btn.textContent = '🚀 Entrar e Confirmar';
+                return;
+            }
+            const { data: newClient, error } = await sb.from('clientes')
+                .insert({ name, phone, debt: 0 }).select().single();
+            if (error) throw error;
+            client = newClient;
+        }
+
+        user = {
+            name: client.name, phone: client.phone, debt: client.debt,
+            created_at: client.created_at, oferta_ativa: client.oferta_ativa
+        };
+        localStorage.setItem('salgados_phone', phone);
+        localStorage.setItem('salgados_user',  JSON.stringify(user));
+
+        // Preenche, exibe comprovante e registra automaticamente
+        preencherComprovante();
+        mostrar('telaComprovante');
+        if (!pixJaRegistrado()) confirmarPagamento();
+
+    } catch(e) {
+        console.error('Auth error:', e);
+        loginErro('Erro de conexão. Tente novamente.');
+        btn.disabled = false; btn.textContent = '🚀 Entrar e Confirmar';
+    }
 }
 
-document.getElementById("msg-input").addEventListener("input", function() {
-  this.style.height = "auto";
-  this.style.height = Math.min(this.scrollHeight, 120) + "px";
-});
+// ── INIT ──────────────────────────────────────────────────────
+window.onload = async () => {
+    pixDados = parsearURLPix();
+    if (!pixDados) {
+        mostrar('telaSemLink');
+        return;
+    }
 
+    const guard = setTimeout(() => mostrar('telaLogin'), 10000);
 
+    const savedPhone = localStorage.getItem('salgados_phone');
+    if (savedPhone) {
+        try {
+            const { data: client } = await sb.from('clientes')
+                .select('*').eq('phone', savedPhone).maybeSingle();
+            if (client) {
+                user = {
+                    name: client.name, phone: client.phone, debt: client.debt,
+                    created_at: client.created_at, oferta_ativa: client.oferta_ativa
+                };
+                localStorage.setItem('salgados_user', JSON.stringify(user));
+                clearTimeout(guard);
+                preencherComprovante();
+                mostrar('telaComprovante');
+                if (!pixJaRegistrado()) confirmarPagamento();
+                return;
+            }
+        } catch(e) {
+            const cached = localStorage.getItem('salgados_user');
+            if (cached) {
+                user = JSON.parse(cached);
+                clearTimeout(guard);
+                preencherComprovante();
+                mostrar('telaComprovante');
+                if (!pixJaRegistrado()) confirmarPagamento();
+                return;
+            }
+        }
+    }
 
-document.getElementById("datePill").textContent = new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"}).toUpperCase();
-
-setTimeout(() => {
-  const restaurado = carregarLocal();
-  if (!restaurado) {
-    addMsg("bot", "Ola! Sou o 𝕕𝕚𝕟𝕠 𝕚𝕒.\n\nPor enquanto processo pagamentos.\n\nExemplos:\n- Jefferson pagou 50\n- Maria pagou\n- Lanca 25 do Joao");
-  }
-  setTimeout(() => document.getElementById("msg-input").focus(), 100);
-}, 400);
+    clearTimeout(guard);
+    mostrar('telaLogin');
+};
 </script>
 </body>
 </html>
