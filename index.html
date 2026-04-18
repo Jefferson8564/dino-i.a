@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>𝕕𝕚𝕟𝕠 𝕚𝕒</title>
+<title>𝕕𝕚𝕟𝕠 𝕚.𝕒</title>
 <meta name="theme-color" content="#0B141A">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -89,7 +89,7 @@
   <div id="header">
     <div class="header-avatar">&#x1F47D;<div class="status-dot" id="statusDot"></div></div>
     <div class="header-info">
-      <div class="header-name">𝕕𝕚𝕟𝕠 𝕚𝕒 <span style="font-size:11px;color:#c75b24;font-weight:400;">&#x25CF; administrador</span></div>
+      <div class="header-name">𝕕𝕚𝕟𝕠 𝕚.𝕒 <span style="font-size:11px;color:#c75b24;font-weight:400;">&#x25CF; administrador</span></div>
       <div class="header-status" id="headerStatus">online</div>
     </div>
     <button id="gear-btn" onclick="abrirCfg()" aria-label="Configurações">
@@ -382,15 +382,12 @@ function enviarComprovanteWpp(phone, nome, valor, novoSaldo, novTk, novDi) {
   else                    saldoLinha = "✅ Conta quitada ♻️";
 
   let extras = "";
-  if (novTk > 0 || novDi > 0) {
-    let partes = [];
-    if (novTk > 0) partes.push("🎟️ +" + novTk);
-    if (novDi > 0) partes.push("💎 +" + novDi);
-    extras = "\n" + partes.join(" ");
-  }
+  if (novTk > 0) extras += "\n🎟️ +" + novTk;
+  if (novDi > 0) extras += "\n💎 +" + novDi;
 
   const msg =
-    "🧾 *COMPROVANTE DE PAGAMENTO*\n" +
+    "👽 *𝔻𝕀ℕ𝕆 𝕚.𝔸*ᵃᵈᵐⁱⁿⁱˢᵗʳᵃᵈᵒʳ\n" +
+    "aqui está seu comprovante de pagamento.\n" +
     "*O Rei da Coxinha* 🍗\n" +
     "──────────────────\n" +
     "👤 Cliente: " + nome + "\n" +
@@ -398,7 +395,7 @@ function enviarComprovanteWpp(phone, nome, valor, novoSaldo, novTk, novDi) {
     "💰 Valor pago: R$ " + valor.toFixed(2).replace(".",",") + "\n\n" +
     saldoLinha + "\n" +
     "──────────────────" + extras + "\n" +
-    "✅ Obrigado pelo pagamento!";
+    "👽 Obrigado pelo pagamento!";
 
   const tel = String(phone).replace(/\D/g, "");
   const link = "https://wa.me/" + (tel.startsWith("55") ? tel : "55" + tel) + "?text=" + encodeURIComponent(msg);
@@ -424,26 +421,8 @@ async function confirmarPendente() {
     } else {
       const res = await executarPagamento(cliente.phone, valor);
       document.getElementById("typing").style.display = "none";
-
-      let linha1;
-      if (res.novoSaldo > 0)      linha1 = "💰 Saldo devedor: R$ " + res.novoSaldo.toFixed(2).replace(".",",");
-      else if (res.novoSaldo < 0) linha1 = "💚 Crédito a favor: R$ " + Math.abs(res.novoSaldo).toFixed(2).replace(".",",");
-      else                        linha1 = "✅ Conta quitada ♻️";
-
-      let extras = "";
-      if (res.novTk > 0) extras += "  🎟️ +" + res.novTk;
-      if (res.novDi > 0) extras += "  💎 +" + res.novDi;
-
-      const msgConfirm =
-        "✅ *Registrado no Supabase*\n" +
-        "──────────────────\n" +
-        "👤 " + res.nome + "\n" +
-        "💸 R$ " + valor.toFixed(2).replace(".",",") + "\n" +
-        linha1 + extras + "\n" +
-        "──────────────────";
-
-      addToast(msgConfirm, { phone: cliente.phone, nome: res.nome, valor, novoSaldo: res.novoSaldo, novTk: res.novTk, novDi: res.novDi });
-      historico.push({ role:"assistant", content: msgConfirm });
+      addToast("♻️ comprovante", { phone: cliente.phone, nome: res.nome, valor, novoSaldo: res.novoSaldo, novTk: res.novTk, novDi: res.novDi });
+      historico.push({ role:"assistant", content: "✅ " + res.nome });
     }
   } catch(e) {
     document.getElementById("typing").style.display = "none";
@@ -1113,7 +1092,7 @@ setTimeout(() => {
     const input = document.getElementById("msg-input");
     if (input) input.value = pix.remetente + " pagou " + pix.valorFmt;
   } else if (!restaurado) {
-    addMsg("bot", "Ola! Sou o 𝕕𝕚𝕟𝕠 𝕚𝕒.\n\nExemplos:\n- Jefferson pagou 50\n- Maria pagou\n- Lanca 25 do Joao\n- Comprovantes do Jefferson\n- Comprovantes da Maria de 01/04/2026 ate 17/04/2026");
+    addMsg("bot", "Ola! Sou o 𝕕𝕚𝕟𝕠 𝕚.𝕒.\n\nExemplos:\n- Jefferson pagou 50\n- Maria pagou\n- Lanca 25 do Joao\n- Comprovantes do Jefferson\n- Comprovantes da Maria de 01/04/2026 ate 17/04/2026");
   }
   setTimeout(() => document.getElementById("msg-input").focus(), 100);
 }, 400);
