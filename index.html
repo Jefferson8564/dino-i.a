@@ -424,14 +424,26 @@ async function confirmarPendente() {
     } else {
       const res = await executarPagamento(cliente.phone, valor);
       document.getElementById("typing").style.display = "none";
-      let toast;
-      if (res.novoSaldo > 0)      toast = "✅ Dívida atualizada para R$ " + res.novoSaldo.toFixed(2).replace(".",",");
-      else if (res.novoSaldo < 0) toast = "✅ Crédito a favor R$ " + Math.abs(res.novoSaldo).toFixed(2).replace(".",",");
-      else                        toast = "✅ Quitado ♻️";
-      if (res.novTk > 0) toast += "  +" + res.novTk + " 🎟️";
-      if (res.novDi > 0) toast += " +" + res.novDi + " 💎";
-      addToast(toast, { phone: cliente.phone, nome: res.nome, valor, novoSaldo: res.novoSaldo, novTk: res.novTk, novDi: res.novDi });
-      historico.push({ role:"assistant", content:toast });
+
+      let linha1;
+      if (res.novoSaldo > 0)      linha1 = "💰 Saldo devedor: R$ " + res.novoSaldo.toFixed(2).replace(".",",");
+      else if (res.novoSaldo < 0) linha1 = "💚 Crédito a favor: R$ " + Math.abs(res.novoSaldo).toFixed(2).replace(".",",");
+      else                        linha1 = "✅ Conta quitada ♻️";
+
+      let extras = "";
+      if (res.novTk > 0) extras += "  🎟️ +" + res.novTk;
+      if (res.novDi > 0) extras += "  💎 +" + res.novDi;
+
+      const msgConfirm =
+        "✅ *Registrado no Supabase*\n" +
+        "──────────────────\n" +
+        "👤 " + res.nome + "\n" +
+        "💸 R$ " + valor.toFixed(2).replace(".",",") + "\n" +
+        linha1 + extras + "\n" +
+        "──────────────────";
+
+      addToast(msgConfirm, { phone: cliente.phone, nome: res.nome, valor, novoSaldo: res.novoSaldo, novTk: res.novTk, novDi: res.novDi });
+      historico.push({ role:"assistant", content: msgConfirm });
     }
   } catch(e) {
     document.getElementById("typing").style.display = "none";
@@ -555,16 +567,8 @@ Exemplos de comprovantes: "me manda os comprovantes do Jefferson", "comprovantes
 
 // ── VERIFICAR SE RESPOSTA E ESCOLHA DE SUGESTAO ──
 function resolverSugestao(texto, sugestoes) {
-  const t = normStr(texto);
-  // escolha por numero
   const num = parseInt(texto.trim());
   if (!isNaN(num) && num >= 1 && num <= sugestoes.length) return sugestoes[num-1];
-  // escolha por nome
-  for (const s of sugestoes) {
-    if (normStr(s.name).includes(t) || t.includes(normStr(s.name.split(" ")[0]))) return s;
-  }
-  // confirmacao generica: sim, isso, ele, esse, etc
-  if (/^(sim|isso|ele|essa|esse|s|yes|confirma|pode)/.test(t)) return sugestoes[0];
   return null;
 }
 
@@ -627,7 +631,7 @@ async function processarTexto(texto) {
 
       // Fuzzy — mostra sugestões
       const lista = resultado.sugestoes.map((s,i) => (i+1) + ". " + s.name).join("\n");
-      const resp = "💸 PIX de R$ " + valorNum.toFixed(2).replace('.',',') + " (" + data + " às " + hora + ")\nRemetente: " + nomeUrl + "\n\nQuem é esse cliente?\n\n" + lista + "\n\nResponda com o nome ou número.";
+      const resp = "💸 PIX de R$ " + valorNum.toFixed(2).replace('.',',') + " (" + data + " às " + hora + ")\nRemetente: " + nomeUrl + "\n\nNão achei esse cliente. Quem é?\n\n" + lista + "\n\nResponda com o número ou digite outro nome.";
       addMsg("bot", resp);
       historico.push({ role:"assistant", content: resp });
       pendenteSug = { acao:"pagamento_pix", sugestoes:resultado.sugestoes, valor:valorNum, data, hora, nomeUrl };
@@ -642,10 +646,33 @@ async function processarTexto(texto) {
 
   // ── SE TINHA SUGESTÃO PIX PENDENTE ──────────────────────────
   if (pendenteSug && pendenteSug.acao === "pagamento_pix") {
-    const escolha = resolverSugestao(texto, pendenteSug.sugestoes.length ? pendenteSug.sugestoes : await carregarClientes().then(cs => {
-      const r = encontrarCliente(cs, texto);
-      return r ? (r.exato ? [r.cliente] : r.sugestoes) : [];
-    }));
+    let escolha = resolverSugestao(texto, pendenteSug.sugestoes);
+
+    // Se não escolheu número → trata como novo nome e busca no banco
+    if (!escolha) {
+      const clientes = await carregarClientes();
+      const resultado = encontrarCliente(clientes, texto);
+      if (resultado && resultado.exato) {
+        escolha = resultado.cliente;
+      } else if (resultado && !resultado.exato) {
+        const lista = resultado.sugestoes.map((s,i) => (i+1) + ". " + s.name).join("\n");
+        const { valor, data, hora, nomeUrl } = pendenteSug;
+        const novaResp = "Não achei \"" + texto + "\" exato. Quem você quis dizer?\n\n" + lista + "\n\nResponda com o número ou outro nome.";
+        pendenteSug = { acao:"pagamento_pix", sugestoes:resultado.sugestoes, valor, data, hora, nomeUrl };
+        addMsg("bot", novaResp);
+        historico.push({ role:"assistant", content:novaResp });
+        ocupado = false; setStatus(false);
+        return;
+      } else {
+        pendenteSug = null;
+        const semResp = "Não encontrei nenhum cliente com esse nome.";
+        addMsg("bot", semResp);
+        historico.push({ role:"assistant", content:semResp });
+        ocupado = false; setStatus(false);
+        return;
+      }
+    }
+
     if (escolha) {
       const { valor, data, hora, nomeUrl } = pendenteSug;
       pendenteSug = null;
@@ -665,9 +692,33 @@ async function processarTexto(texto) {
     }
   }
 
-  // Se tinha sugestoes pendentes, verifica se usuario escolheu
   if (pendenteSug) {
-    const escolha = resolverSugestao(texto, pendenteSug.sugestoes);
+    let escolha = resolverSugestao(texto, pendenteSug.sugestoes);
+
+    // Se não escolheu número → trata como novo nome e busca no banco
+    if (!escolha) {
+      const clientes = await carregarClientes();
+      const resultado = encontrarCliente(clientes, texto);
+      if (resultado && resultado.exato) {
+        escolha = resultado.cliente;
+      } else if (resultado && !resultado.exato) {
+        const lista = resultado.sugestoes.map((s,i) => (i+1) + ". " + s.name).join("\n");
+        const novaResp = "Não achei \"" + texto + "\" exato. Quem você quis dizer?\n\n" + lista + "\n\nResponda com o número ou outro nome.";
+        pendenteSug = { sugestoes:resultado.sugestoes, valor: pendenteSug.valor };
+        addMsg("bot", novaResp);
+        historico.push({ role:"assistant", content:novaResp });
+        ocupado = false; setStatus(false);
+        return;
+      } else {
+        pendenteSug = null;
+        const semResp = "Não encontrei nenhum cliente com esse nome.";
+        addMsg("bot", semResp);
+        historico.push({ role:"assistant", content:semResp });
+        ocupado = false; setStatus(false);
+        return;
+      }
+    }
+
     if (escolha) {
 
       // ── Rota: comprovantes ──
@@ -730,11 +781,8 @@ async function processarTexto(texto) {
       ocupado = true;
       return;
     } else {
-      // Nao reconheceu escolha — cancela sugestao e reprocessa como nova mensagem
       pendenteSug = null;
-      addMsg("bot", "Ok, entendido.");
-      historico.push({ role:"assistant", content:"Ok, entendido." });
-      // cai no fluxo normal abaixo (nao retorna)
+      // cai no fluxo normal abaixo
     }
   }
 
@@ -764,7 +812,7 @@ async function processarTexto(texto) {
       // Fuzzy — mostra sugestoes
       if (!resultado.exato) {
         const lista = resultado.sugestoes.map((s,i) => (i+1) + ". " + s.name).join("\n");
-        const resp = "Nao achei \"" + intencao.cliente + "\" exato. Voce quis dizer?\n\n" + lista + "\n\nResponda com o nome ou numero.";
+        const resp = "Não achei \"" + intencao.cliente + "\" exato. Quem você quis dizer?\n\n" + lista + "\n\nResponda com o número ou digite outro nome.";
         document.getElementById("typing").style.display = "none";
         addMsg("bot", resp);
         historico.push({ role:"assistant", content:resp });
@@ -1003,6 +1051,20 @@ function fecharCfgFora(e) {
 }
 
 document.getElementById("datePill").textContent = new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"}).toUpperCase();
+
+function confirmarPixUrl() {
+  document.querySelectorAll(".confirm-btns").forEach(el => el.remove());
+  enviar();
+}
+function cancelarPixUrl() {
+  document.querySelectorAll(".confirm-btns").forEach(el => {
+    const span = document.createElement("span");
+    span.textContent = "Cancelado";
+    span.style.cssText = "display:block;color:#f87171;font-size:11px;margin-top:6px;";
+    el.replaceWith(span);
+  });
+  document.getElementById("msg-input").value = "";
+}
 
 // ── RECEBER PIX DA URL (?valor=data=hora=nome=sobrenome) ──
 function lerPixDaURL() {
