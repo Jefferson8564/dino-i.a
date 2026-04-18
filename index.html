@@ -55,6 +55,33 @@
   .toast-clicavel:active { background: rgba(22,101,52,0.6); transform: scale(0.97); }
   @keyframes bounce { 0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)} }
   @keyframes fadeUp { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
+  #chips { display:flex; gap:6px; padding: 4px 10px 0; overflow-x:auto; flex-shrink:0; scrollbar-width:none; }
+  #chips::-webkit-scrollbar { display:none; }
+  .chip { background:#1E2D36; border:1px solid #2A3942; border-radius:16px; padding:5px 12px; color:#A8B8C0; font-size:13px; white-space:nowrap; cursor:pointer; user-select:none; -webkit-user-select:none; flex-shrink:0; transition: background .15s, color .1s; }
+  .chip:active { background:#2A3942; color:#E9EDEF; }
+
+  /* ── ENGRENAGEM ── */
+  #gear-btn { background:none; border:none; cursor:pointer; padding:4px; display:flex; align-items:center; justify-content:center; color:#8696A0; flex-shrink:0; transition: color .2s, transform .3s; }
+  #gear-btn:active { color:#E9EDEF; transform: rotate(60deg); }
+
+  /* ── MODAL CONFIGURAÇÕES ── */
+  #cfg-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:100; justify-content:center; align-items:flex-end; }
+  #cfg-overlay.open { display:flex; }
+  #cfg-box { background:#111B21; border-radius:18px 18px 0 0; width:100%; max-width:480px; padding:20px 20px 36px; animation: slideUp .22s ease; }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  #cfg-box h2 { color:#E9EDEF; font-size:16px; font-weight:700; margin-bottom:6px; }
+  #cfg-box p  { color:#8696A0; font-size:12px; margin-bottom:16px; }
+  .cfg-section-title { color:#8696A0; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; margin-bottom:8px; margin-top:4px; }
+  .key-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:20px; }
+  .key-num { background:#1E2D36; border:1.5px solid #2A3942; border-radius:10px; padding:10px 4px; color:#8696A0; font-size:14px; font-weight:700; text-align:center; cursor:pointer; transition: all .15s; user-select:none; -webkit-user-select:none; }
+  .key-num.active { background:#0d2e1e; border-color:#25D366; color:#25D366; }
+  .key-num:active { transform:scale(.93); }
+  #cfg-close { width:100%; padding:13px; background:#1E2D36; border:none; border-radius:12px; color:#E9EDEF; font-size:15px; font-weight:600; cursor:pointer; margin-top:4px; }
+  #cfg-close:active { background:#2A3942; }
+  .model-list { display:flex; flex-direction:column; gap:6px; margin-bottom:20px; }
+  .model-item { background:#1E2D36; border:1.5px solid #2A3942; border-radius:10px; padding:10px 14px; color:#8696A0; font-size:13px; cursor:pointer; transition: all .15s; user-select:none; -webkit-user-select:none; }
+  .model-item.active { background:#0d2e1e; border-color:#25D366; color:#25D366; font-weight:600; }
+  .model-item:active { transform:scale(.98); }
 </style>
 </head>
 <body>
@@ -64,6 +91,20 @@
     <div class="header-info">
       <div class="header-name">𝕕𝕚𝕟𝕠 𝕚𝕒 <span style="font-size:11px;color:#c75b24;font-weight:400;">&#x25CF; administrador</span></div>
       <div class="header-status" id="headerStatus">online</div>
+    </div>
+    <button id="gear-btn" onclick="abrirCfg()" aria-label="Configurações">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- MODAL CONFIGURAÇÕES -->
+  <div id="cfg-overlay" onclick="fecharCfgFora(event)">
+    <div id="cfg-box">
+      <h2>⚙️ Configurações</h2>
+      <p>Powered by <strong style="color:#25D366">Gemini 2.0 Flash</strong> — troca automática em caso de limite.</p>
+      <button id="cfg-close" onclick="fecharCfg()">Fechar</button>
     </div>
   </div>
   <div id="wallpaper"></div>
@@ -83,9 +124,56 @@
 <script>
 const SUPABASE_URL = "https://vpeyqgijajywgswmezlh.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwZXlxZ2lqYWp5d2dzd21lemxoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNTM1MDIsImV4cCI6MjA4NjgyOTUwMn0.LA5Cbof7IKWAA7l8YbCuPzANpCy0rX_Dro4l9fcDgoQ";
-const GROQ_KEY = "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";
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODELOS = ["llama-3.3-70b-versatile","llama-3.1-8b-instant","gemma2-9b-it","mixtral-8x7b-32768"];
+// ── GEMINI API ──
+const GEMINI_KEYS = [
+  "AIzaSyCieYb4fI1FLWDQ8LpztAGL_ZinXagFexM", // chave 1
+  "AIzaSyBsEmGgs_8pZNZ8psQu9E0fMuM26kVs8Zk", // chave 2
+  "AIzaSyAMyJC9gYcb_-plzQHuy9dw5TqOGZU-J_g", // chave 3
+  "AIzaSyDDjKn0ufWcH9JGD3tPHkUmXoFqlMID1lM", // chave 4
+  "AIzaSyBMPqUNRkwD7xikoleQXA8ijBXv0SNVLjU",  // chave 5
+  "AIzaSyDfA5LotnfT20Q6le979SfMQtXucD_VdMc",  // chave 6
+  "AIzaSyDOGRIqShVegIyHjivq-qd2sRG7v8NuH_g",  // chave 7
+  "AIzaSyDNysrvoHPQVX9ipN8YqES7WkE7I7Qgym8",  // chave 8
+  "AIzaSyAyhoVG48vtf8Brk25o4gbulWTtshelp58",   // chave 9
+  "AIzaSyCRz3q5BBA5CQZHSzCAcDgDO-HDHIX2Jxk",  // chave 10
+];
+let geminiKeyIndex = 0;
+const GEMINI_MODEL = "gemini-2.5-flash";
+
+async function geminiRequest(systemPrompt, mensagens) {
+  for (let tentativa = 0; tentativa < GEMINI_KEYS.length; tentativa++) {
+    const chave = GEMINI_KEYS[geminiKeyIndex];
+    const url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent";
+    const contents = [];
+    for (const m of mensagens) {
+      contents.push({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] });
+    }
+    const body = {
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents,
+      generationConfig: { temperature: 0.1, maxOutputTokens: 300 }
+    };
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": chave },
+        body: JSON.stringify(body)
+      });
+      const json = await res.json();
+      // 429 = rate limit, 401/403 = chave inválida → tenta próxima
+      if (res.status === 429 || res.status === 401 || res.status === 403) {
+        geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length;
+        continue;
+      }
+      if (!res.ok) return { erro: "Erro na API (" + res.status + ")." };
+      const texto = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      return { ok: true, texto };
+    } catch(e) {
+      return { erro: "Erro de conexão." };
+    }
+  }
+  return { erro: "Limite atingido. Tente em alguns minutos." };
+}
 
 const SB_H = { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json" };
 
@@ -371,8 +459,64 @@ function cancelarPendente() {
   historico.push({ role:"assistant", content:"Cancelado." });
 }
 
+// ── BYPASS POR REGEX (evita falhas da IA em casos óbvios) ──
+function detectarPorRegex(texto) {
+  const t = normStr(texto);
+
+  // helper: extrai nome após preposição "de/do/da/dos/das/do/pra/para"
+  function extrairNome(str) {
+    const m = str.match(/\b(?:de|do|da|dos|das|pra|para)\s+([a-záàâãéêíóôõúç][a-záàâãéêíóôõúç\s]{1,40}?)(?:\s+de\s+\d|$)/i);
+    return m ? m[1].trim() : "";
+  }
+
+  // ── COMPROVANTE(S) ──
+  if (/comprovante[s]?|historico\s+de\s+pagamento[s]?/.test(t)) {
+    const nome = extrairNome(t);
+    const datas = [...texto.matchAll(/(\d{2}\/\d{2}\/\d{4})/g)].map(m => m[1]);
+    const obj = { acao:"comprovantes", cliente: nome };
+    if (datas[0]) obj.data_inicio = datas[0];
+    if (datas[1]) obj.data_fim    = datas[1];
+    return obj;
+  }
+
+  // ── PAGAMENTO: pagou / lança / quita / quitou / quitado / pago ──
+  if (/\bpagou\b|\blanca\b|\blança\b|\bquita\b|\bquitou\b|\bquitado\b|\bpago\b/.test(t)) {
+    // extrai valor (número)
+    const mVal = texto.match(/\b(\d+(?:[.,]\d{1,2})?)\b/);
+    const valor = mVal ? parseFloat(mVal[1].replace(",",".")) : 0;
+    // extrai nome: pode vir antes ou depois do verbo
+    const mNome = t.match(/^([a-záàâãéêíóôõúç][a-záàâãéêíóôõúç\s]{1,30}?)\s+(?:pagou|pago|quitou|quitado)/i)
+                || t.match(/(?:de|do|da)\s+([a-záàâãéêíóôõúç][a-záàâãéêíóôõúç\s]{1,30}?)(?:\s|$)/i);
+    const cliente = mNome ? mNome[1].trim() : "";
+    return { acao:"pagamento", cliente, valor };
+  }
+
+  // ── DÍVIDA / DÉBITO / SALDO de alguém específico ──
+  const temPessoa = /\b(?:de|do|da)\s+[a-záàâãéêíóôõúç]/.test(t);
+  if (/d[ií]vida[s]?|d[eé]bito[s]?|saldo\s+(?:de|do|da)|quanto\s+(?:deve|ta\s+devendo|está\s+devendo)/.test(t) && temPessoa) {
+    const nome = extrairNome(t);
+    return { acao:"consulta", cliente: nome };
+  }
+
+  // ── LISTA DEVEDORES (sem nome específico) ──
+  if (/d[ií]vida[s]?|d[eé]bito[s]?|devendo|devedor[es]?|quem\s+deve/.test(t) && !temPessoa) {
+    return { acao:"lista_devedores" };
+  }
+
+  // ── LISTA CREDORES ──
+  if (/cr[eé]dito[s]?/.test(t) && !temPessoa) {
+    return { acao:"lista_credores" };
+  }
+
+  return null; // deixa a IA decidir
+}
+
 // ── IA ──
 async function detectarIntencao(texto) {
+  // Tenta regex primeiro (mais rápido e confiável para casos claros)
+  const regexResult = detectarPorRegex(texto);
+  if (regexResult) return regexResult;
+
   const system = `Voce e Lara, assistente do sistema "O Rei da Coxinha".
 Sua funcao e identificar pagamentos/quitacoes e consultas de saldo de clientes.
 Responda SOMENTE com JSON puro, sem markdown, sem explicacao.
@@ -391,26 +535,21 @@ Exemplos de lista_devedores: "quais clientes tem divida", "quem deve", "lista os
 Exemplos de lista_credores: "quais clientes tem credito", "quem tem saldo positivo", "qual crente com credito", "quem esta com credito", "lista os que tem credito", "quem tem saldo a favor"
 Exemplos de comprovantes: "me manda os comprovantes do Jefferson", "comprovantes da Maria", "comprovantes do joao de 01/04/2026 ate 17/04/2026", "historico de pagamentos do pedro", "todos os comprovantes da ana"`;
 
-  for (const modelo of MODELOS) {
-    try {
-      const res = await fetch(GROQ_URL, {
-        method:"POST",
-        headers:{"Content-Type":"application/json","Authorization":"Bearer " + GROQ_KEY},
-        body:JSON.stringify({ model:modelo, messages:[{role:"system",content:system},...historico.slice(-6),{role:"user",content:texto}], temperature:0.1, max_tokens:150 })
-      });
-      const json = await res.json();
-      if (!res.ok) continue;
-      const raw = json.choices?.[0]?.message?.content || "";
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (match) {
-        const parsed = JSON.parse(match[0]);
-        if (parsed.cliente && parsed.cliente.length > 40) {
-          return { acao:"outro", resposta:"Nao entendi. Pode informar o nome do cliente?" };
-        }
-        return parsed;
+  try {
+    const msgs = [...historico.slice(-6), { role:"user", content:texto }];
+    const resultado = await geminiRequest(system, msgs);
+    if (resultado.erro) return { acao:"outro", resposta: resultado.erro };
+
+    const raw = resultado.texto;
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (match) {
+      const parsed = JSON.parse(match[0]);
+      if (parsed.cliente && parsed.cliente.length > 40) {
+        return { acao:"outro", resposta:"Nao entendi. Pode informar o nome do cliente?" };
       }
-    } catch(e) { continue; }
-  }
+      return parsed;
+    }
+  } catch(e) {}
   return { acao:"outro", resposta:"Nao consegui processar. Tente novamente." };
 }
 
@@ -442,10 +581,129 @@ async function enviar() {
 }
 
 async function processarTexto(texto) {
+
+  // ── DETECTA LINK PIX COLADO ──────────────────────────────────
+  // Aceita: "?39,90=18/04/26=12:58=Anderson=Gomes" ou URL completa
+  const pixMatch = texto.match(/[?&]?(\d+[,\.]\d{2})=(\d{2}\/\d{2}\/\d{2,4})=(\d{2}:\d{2}(?::\d{2})?)=([A-Za-zÀ-ú]+)=([A-Za-zÀ-ú]+)/);
+  if (pixMatch && !pendenteSug && !pendente && !ocupado) {
+    const valorNum  = parseFloat(pixMatch[1].replace(',','.'));
+    const data      = pixMatch[2];
+    const hora      = pixMatch[3];
+    const nomeUrl   = pixMatch[4] + ' ' + pixMatch[5];
+
+    ocupado = true;
+    setStatus(true);
+    document.getElementById("typing").style.display = "flex";
+    rolar();
+
+    try {
+      const clientes = await carregarClientes();
+      document.getElementById("typing").style.display = "none";
+
+      const resultado = encontrarCliente(clientes, nomeUrl);
+
+      if (!resultado) {
+        const resp = "Recebi o PIX de R$ " + valorNum.toFixed(2).replace('.',',') + " (" + data + " às " + hora + ").\nNão encontrei nenhum cliente com o nome \"" + nomeUrl + "\". Qual o nome correto?";
+        addMsg("bot", resp);
+        historico.push({ role:"assistant", content: resp });
+        pendenteSug = { acao:"pagamento_pix", sugestoes:[], valor:valorNum, data, hora, nomeUrl };
+        ocupado = false; setStatus(false);
+        return;
+      }
+
+      if (resultado.exato) {
+        const c = resultado.cliente;
+        const debtAtual = Number(c.debt||0);
+        const novoSaldo = debtAtual - valorNum;
+        const saldoDepois = novoSaldo > 0 ? "Saldo após: R$ " + novoSaldo.toFixed(2).replace('.',',') : novoSaldo < 0 ? "Crédito após: R$ " + Math.abs(novoSaldo).toFixed(2).replace('.',',') : "Conta quitada";
+        pendente = { cliente:c, valor:valorNum, pixDados:{ data, hora, nomeUrl } };
+        const msg = "💸 PIX recebido!\n\nRemetente: " + nomeUrl + "\nValor: R$ " + valorNum.toFixed(2).replace('.',',') + "\nData: " + data + " às " + hora + "\n\nRegistrar para " + c.name + "?\nDébito atual: R$ " + debtAtual.toFixed(2).replace('.',',') + "\n" + saldoDepois;
+        addMsg("bot", msg, true);
+        historico.push({ role:"assistant", content: msg });
+        ocupado = true;
+        setStatus(false);
+        return;
+      }
+
+      // Fuzzy — mostra sugestões
+      const lista = resultado.sugestoes.map((s,i) => (i+1) + ". " + s.name).join("\n");
+      const resp = "💸 PIX de R$ " + valorNum.toFixed(2).replace('.',',') + " (" + data + " às " + hora + ")\nRemetente: " + nomeUrl + "\n\nQuem é esse cliente?\n\n" + lista + "\n\nResponda com o nome ou número.";
+      addMsg("bot", resp);
+      historico.push({ role:"assistant", content: resp });
+      pendenteSug = { acao:"pagamento_pix", sugestoes:resultado.sugestoes, valor:valorNum, data, hora, nomeUrl };
+      ocupado = false; setStatus(false);
+    } catch(e) {
+      document.getElementById("typing").style.display = "none";
+      addMsg("bot", "Erro ao processar PIX: " + e.message);
+      ocupado = false; setStatus(false);
+    }
+    return;
+  }
+
+  // ── SE TINHA SUGESTÃO PIX PENDENTE ──────────────────────────
+  if (pendenteSug && pendenteSug.acao === "pagamento_pix") {
+    const escolha = resolverSugestao(texto, pendenteSug.sugestoes.length ? pendenteSug.sugestoes : await carregarClientes().then(cs => {
+      const r = encontrarCliente(cs, texto);
+      return r ? (r.exato ? [r.cliente] : r.sugestoes) : [];
+    }));
+    if (escolha) {
+      const { valor, data, hora, nomeUrl } = pendenteSug;
+      pendenteSug = null;
+      const debtAtual = Number(escolha.debt||0);
+      const novoSaldo = debtAtual - valor;
+      const saldoDepois = novoSaldo > 0 ? "Saldo após: R$ " + novoSaldo.toFixed(2).replace('.',',') : novoSaldo < 0 ? "Crédito após: R$ " + Math.abs(novoSaldo).toFixed(2).replace('.',',') : "Conta quitada";
+      pendente = { cliente:escolha, valor, pixDados:{ data, hora, nomeUrl } };
+      const msg = "Confirmar pagamento?\n\n" + escolha.name + "\nValor: R$ " + valor.toFixed(2).replace('.',',') + "\nDébito atual: R$ " + debtAtual.toFixed(2).replace('.',',') + "\n" + saldoDepois;
+      addMsg("bot", msg, true);
+      historico.push({ role:"assistant", content: msg });
+      ocupado = true;
+      return;
+    } else {
+      pendenteSug = null;
+      addMsg("bot", "Ok, cancelado.");
+      historico.push({ role:"assistant", content:"Ok, cancelado." });
+    }
+  }
+
   // Se tinha sugestoes pendentes, verifica se usuario escolheu
   if (pendenteSug) {
     const escolha = resolverSugestao(texto, pendenteSug.sugestoes);
     if (escolha) {
+
+      // ── Rota: comprovantes ──
+      if (pendenteSug.acao === "comprovantes") {
+        const { data_inicio, data_fim } = pendenteSug;
+        pendenteSug = null;
+        ocupado = true;
+        setStatus(true);
+        document.getElementById("typing").style.display = "flex";
+        rolar();
+        try {
+          let url = SUPABASE_URL + "/rest/v1/pagamentos_pix?select=*&phone=eq." + encodeURIComponent(escolha.phone) + "&order=created_at.asc";
+          if (data_inicio) { const [d,m,a] = data_inicio.split("/"); url += "&data_pix=gte." + encodeURIComponent(a+"-"+m+"-"+d); }
+          if (data_fim)    { const [d,m,a] = data_fim.split("/");    url += "&data_pix=lte." + encodeURIComponent(a+"-"+m+"-"+d); }
+          const comprovantes = await (await fetch(url, { headers: SB_H })).json();
+          document.getElementById("typing").style.display = "none";
+          if (!Array.isArray(comprovantes) || comprovantes.length === 0) {
+            const resp = "Nenhum comprovante encontrado para " + escolha.name + (data_inicio ? " no período informado" : "") + ".";
+            addMsg("bot", resp); historico.push({ role:"assistant", content:resp });
+          } else {
+            const total = comprovantes.reduce((acc, c) => acc + Number(c.valor||0), 0);
+            const lista = comprovantes.map(c => {
+              const emissor = c.adm ? "ᵉᵐⁱˢˢᵒʳ* ᵃᵈᵐⁱⁿ" : "ᵉᵐⁱˢˢᵒʳ* ᶜˡⁱᵉⁿᵗᵉ";
+              return "──────────────────\n👤 Cliente: " + escolha.name + "\n📅 Data/Hora: " + c.data_pix + ", " + c.hora_pix + "\n💰 Valor pago: R$ " + Number(c.valor).toFixed(2).replace(".",",") + "\n" + emissor + "\n──────────────────";
+            }).join("\n");
+            const resp = "Comprovantes de " + escolha.name + " (" + comprovantes.length + "):\n\n" + lista + "\n\nTotal: R$ " + total.toFixed(2).replace(".",",");
+            addMsg("bot", resp); historico.push({ role:"assistant", content:resp });
+          }
+        } catch(e) {
+          document.getElementById("typing").style.display = "none";
+          addMsg("bot", "Erro: " + e.message);
+        } finally { ocupado = false; setStatus(false); }
+        return;
+      }
+
+      // ── Rota: pagamento ──
       const valor = pendenteSug.valor;
       pendenteSug = null;
       const debtAtual = Number(escolha.debt||0);
@@ -642,7 +900,7 @@ async function processarTexto(texto) {
         const resp = "Nao achei \"" + nomeQuery + "\" exato. Voce quis dizer?\n\n" + lista + "\n\nResponda com o nome ou numero.";
         addMsg("bot", resp);
         historico.push({ role:"assistant", content:resp });
-        pendenteSug = { sugestoes:resultado.sugestoes, valor:0 };
+        pendenteSug = { acao:"comprovantes", sugestoes:resultado.sugestoes, data_inicio:intencao.data_inicio||null, data_fim:intencao.data_fim||null };
         ocupado = false; setStatus(false);
         return;
       }
@@ -705,11 +963,94 @@ document.getElementById("msg-input").addEventListener("input", function() {
 
 
 
+// ── CONFIGURAÇÕES: engrenagem ──
+function renderKeyGrid() {
+  const grid = document.getElementById("key-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  for (let i = 0; i < GROQ_KEYS.length; i++) {
+    const btn = document.createElement("div");
+    btn.className = "key-num" + (i === groqKeyIndex ? " active" : "");
+    btn.textContent = i + 1;
+    btn.onclick = () => { groqKeyIndex = i; renderKeyGrid(); };
+    grid.appendChild(btn);
+  }
+}
+function renderModelList() {
+  const list = document.getElementById("model-list");
+  if (!list) return;
+  list.innerHTML = "";
+  for (let i = 0; i < MODELOS.length; i++) {
+    const item = document.createElement("div");
+    item.className = "model-item" + (i === modeloIndex ? " active" : "");
+    item.textContent = MODELOS[i].nome;
+    item.onclick = () => {
+      modeloIndex = i;
+      try { localStorage.setItem("dino_modelo_idx", i); } catch(e) {}
+      renderModelList();
+    };
+    list.appendChild(item);
+  }
+}
+function abrirCfg() {
+  document.getElementById("cfg-overlay").classList.add("open");
+}
+function fecharCfg() {
+  document.getElementById("cfg-overlay").classList.remove("open");
+}
+function fecharCfgFora(e) {
+  if (e.target === document.getElementById("cfg-overlay")) fecharCfg();
+}
+
 document.getElementById("datePill").textContent = new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"}).toUpperCase();
+
+// ── RECEBER PIX DA URL (?valor=data=hora=nome=sobrenome) ──
+function lerPixDaURL() {
+  const search = decodeURIComponent(window.location.search);
+  if (!search) return null;
+  const raw = search.substring(1);
+  const partes = raw.split('=');
+  if (partes.length !== 5) return null;
+  const valorRaw  = partes[0];
+  const data      = partes[1];
+  const hora      = partes[2];
+  const nome      = partes[3];
+  const sobrenome = partes[4];
+  if (valorRaw.includes('R$')) return null;
+  if (!nome.trim() || !sobrenome.trim()) return null;
+  const valorNum = parseFloat(valorRaw.replace(/\./g,'').replace(',','.'));
+  if (isNaN(valorNum) || valorNum <= 0) return null;
+  return {
+    valor:    valorNum,
+    valorFmt: 'R$ ' + valorNum.toFixed(2).replace('.',','),
+    data,
+    hora,
+    remetente: nome + ' ' + sobrenome
+  };
+}
 
 setTimeout(() => {
   const restaurado = carregarLocal();
-  if (!restaurado) {
+
+  // Verifica se chegou um PIX via URL
+  const pix = lerPixDaURL();
+  if (pix) {
+    const msg =
+      "💸 *PIX RECEBIDO*\n" +
+      "──────────────────\n" +
+      "👤 Remetente: " + pix.remetente + "\n" +
+      "💰 Valor: " + pix.valorFmt + "\n" +
+      "📅 Data: " + pix.data + "\n" +
+      "🕐 Hora: " + pix.hora + "\n" +
+      "──────────────────\n" +
+      "Deseja registrar o pagamento?";
+    addMsg("bot", msg);
+    historico.push({ role:"assistant", content: msg });
+
+    // Pré-preenche o input para facilitar o registro
+    const input = document.getElementById("msg-input");
+    if (input) input.value = pix.remetente + " pagou " + pix.valorFmt;
+  } else if (!restaurado) {
     addMsg("bot", "Ola! Sou o 𝕕𝕚𝕟𝕠 𝕚𝕒.\n\nExemplos:\n- Jefferson pagou 50\n- Maria pagou\n- Lanca 25 do Joao\n- Comprovantes do Jefferson\n- Comprovantes da Maria de 01/04/2026 ate 17/04/2026");
   }
   setTimeout(() => document.getElementById("msg-input").focus(), 100);
