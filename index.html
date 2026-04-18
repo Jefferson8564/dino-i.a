@@ -160,13 +160,19 @@ async function geminiRequest(systemPrompt, mensagens) {
         body: JSON.stringify(body)
       });
       const json = await res.json();
-      // 429 = rate limit, 401/403 = chave inválida → tenta próxima
-      if (res.status === 429 || res.status === 401 || res.status === 403) {
+      // Checa erro no HTTP status OU dentro do JSON (Gemini às vezes retorna 200 com erro no body)
+      const errCode = json?.error?.code || res.status;
+      if (errCode === 429 || errCode === 401 || errCode === 403) {
         geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length;
         continue;
       }
-      if (!res.ok) return { erro: "Erro na API (" + res.status + ")." };
+      if (!res.ok || json?.error) return { erro: "Erro na API (" + errCode + ")." };
       const texto = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      if (!texto) {
+        // Candidato bloqueado ou vazio — tenta próxima chave
+        geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length;
+        continue;
+      }
       return { ok: true, texto };
     } catch(e) {
       return { erro: "Erro de conexão." };
