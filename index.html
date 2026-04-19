@@ -168,6 +168,15 @@
       <div class="cfg-section-title" style="margin-top:16px;">Diagnóstico</div>
       <button onclick="diagnosticar()" style="width:100%;padding:10px;background:#2A3942;color:#E9EDEF;border:none;border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px;">🔍 Testar conexão com Gemini</button>
       <div id="diag-result" style="color:#8696A0;font-size:12px;text-align:center;min-height:18px;margin-bottom:16px;"></div>
+      <div class="cfg-section-title" style="margin-top:16px;">Conversa</div>
+      <button onclick="confirmarLimparConversa()" style="width:100%;padding:10px;background:#2D1515;color:#f87171;border:none;border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px;">🗑️ Apagar todas as conversas</button>
+      <div id="limpar-confirm" style="display:none;background:#1a1010;border-radius:10px;padding:12px;margin-bottom:14px;text-align:center;">
+        <p style="color:#f87171;font-size:13px;margin-bottom:10px;">Apagar tudo? Isso não pode ser desfeito.</p>
+        <div style="display:flex;gap:8px;">
+          <button onclick="cancelarLimpar()" style="flex:1;padding:9px;background:#2A3942;color:#E9EDEF;border:none;border-radius:10px;font-size:13px;cursor:pointer;">Cancelar</button>
+          <button onclick="limparConversa()" style="flex:1;padding:9px;background:#c0392b;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">Apagar tudo</button>
+        </div>
+      </div>
       <button id="cfg-close" onclick="fecharCfg()">Fechar</button>
     </div>
   </div>
@@ -628,6 +637,13 @@ function detectarPorRegex(texto) {
     return { acao:"lista_credores" };
   }
 
+  // ── QUEM TEM / FEZ PEDIDO ──
+  if (/quem\s+(tem|fez|fiz|tinha|tinha|efetuou|realizou|mandou|colocou)?\s*pedido[s]?/.test(t) ||
+      /pedido[s]?\s+(de\s+hoje|hoje|do\s+dia)/.test(t)) {
+    const hoje = /hoje|do\s+dia|de\s+hoje/.test(t);
+    return { acao:"lista_pedidos_clientes", hoje };
+  }
+
   // ── PEDIDO: ver / editar / listar todos ──
   if (/\bpedidos?\b/.test(t)) {
     const nome = extrairNome(t);
@@ -673,6 +689,7 @@ Comprovantes de cliente: {"acao":"comprovantes","cliente":"NOME","data_inicio":"
 Ver pedido de cliente: {"acao":"ver_pedido","cliente":"NOME"}
 Editar/alterar pedido de cliente: {"acao":"editar_pedido","cliente":"NOME"}
 Listar todos os pedidos de cliente: {"acao":"listar_pedidos","cliente":"NOME"}
+Quem fez/tem pedido (todos ou hoje): {"acao":"lista_pedidos_clientes","hoje":false} ou {"acao":"lista_pedidos_clientes","hoje":true}
 Outro: {"acao":"outro","resposta":"resposta curta"}
 "cliente" deve ser nome de pessoa, nunca frase longa.
 Erros de digitação: "duvida"="divida", "clente"="cliente", "creditu"="credito", "peddo"="pedido".`;
@@ -1223,6 +1240,47 @@ async function processarTexto(texto) {
       await mostrarPedidosChat(resultado.cliente);
       ocupado = false; setStatus(false);
 
+    } else if (intencao.acao === "lista_pedidos_clientes") {
+      const hoje = !!intencao.hoje;
+      const clientes = await carregarClientes();
+      let url = SUPABASE_URL + "/rest/v1/pedidos?select=*&order=created_at.desc";
+      if (hoje) {
+        // filtra pelo dia de hoje em SP
+        const agSP = new Date(new Date().toLocaleString("en-US", { timeZone:"America/Sao_Paulo" }));
+        const iso  = agSP.getFullYear() + "-" + String(agSP.getMonth()+1).padStart(2,"0") + "-" + String(agSP.getDate()).padStart(2,"0");
+        url += "&created_at=gte." + encodeURIComponent(iso + "T00:00:00");
+      }
+      const rows = await (await fetch(url, { headers: SB_H })).json();
+      document.getElementById("typing").style.display = "none";
+
+      if (!Array.isArray(rows) || rows.length === 0) {
+        const resp = hoje ? "Nenhum pedido feito hoje." : "Nenhum pedido encontrado.";
+        addMsg("bot", resp); historico.push({ role:"assistant", content:resp });
+        ocupado = false; setStatus(false);
+        return;
+      }
+
+      // Agrupa por cliente (phone), pega o mais recente por cliente
+      const porCliente = {};
+      for (const r of rows) {
+        if (!porCliente[r.customer_phone]) porCliente[r.customer_phone] = r;
+      }
+      const phones = Object.keys(porCliente);
+      const linhas = phones.map((phone, i) => {
+        const cli = clientes.find(c => String(c.phone) === String(phone));
+        const nome = cli ? cli.name : phone;
+        const total = Number(porCliente[phone].total || 0).toFixed(2).replace(".",",");
+        return (i+1) + ". " + nome + " — R$ " + total;
+      });
+
+      const titulo = hoje
+        ? "📋 Pedidos de hoje (" + phones.length + "):\n\n"
+        : "📋 Clientes com pedido (" + phones.length + "):\n\n";
+      const resp = titulo + linhas.join("\n");
+      addMsg("bot", resp);
+      historico.push({ role:"assistant", content:resp });
+      ocupado = false; setStatus(false);
+
     } else {
       addMsg("bot", resp);
       historico.push({ role:"assistant", content:resp });
@@ -1292,6 +1350,24 @@ function abrirCfg() {
 }
 function fecharCfg() {
   document.getElementById("cfg-overlay").classList.remove("open");
+  document.getElementById("limpar-confirm").style.display = "none";
+}
+function confirmarLimparConversa() {
+  document.getElementById("limpar-confirm").style.display = "block";
+}
+function cancelarLimpar() {
+  document.getElementById("limpar-confirm").style.display = "none";
+}
+function limparConversa() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+  historico = [];
+  msgsSalvas = [];
+  // Limpa mensagens do DOM (mantém só a date pill e o typing)
+  const container = document.getElementById("messages");
+  [...container.children].forEach(el => {
+    if (!el.classList.contains("date-pill") && el.id !== "typing") el.remove();
+  });
+  fecharCfg();
 }
 function fecharCfgFora(e) {
   if (e.target === document.getElementById("cfg-overlay")) fecharCfg();
