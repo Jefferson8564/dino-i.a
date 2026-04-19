@@ -1122,7 +1122,7 @@ async function diagnosticar() {
       el.textContent = '❌ Chave não configurada!';
       return;
     }
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODELS[geminiModelIndex].id + ':generateContent?key=' + chave;
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL() + ':generateContent?key=' + chave;
     const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({contents:[{parts:[{text:'oi'}]}]}) });
     if (res.ok) {
       el.style.color = '#25D366';
