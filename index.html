@@ -1268,11 +1268,52 @@ setTimeout(() => {
 // ── PEDIDOS ──────────────────────────────────────────────────────
 let pedidoAtual = null;   // { cliente, pedido (db row), itens[], cardapio[], editavel }
 
+// Converte o texto do cliente.html para array [{name, price, quantity, categoria}]
+function parsePedidoTexto(texto, cardapio) {
+  const itens = [];
+  const linhas = (texto || "").split("\n");
+  for (const linha of linhas) {
+    // Pular separadores e metadados (cupom, crédito)
+    if (!linha.trim() || linha.startsWith("———") || linha.startsWith("🏷️") || linha.startsWith("💳")) continue;
+    // Formato: [emoji] Nx Nome  (ex: "🍗 2x Coxinha" ou "2x Coxinha")
+    const match = linha.match(/^(?:🍗|🥐|✅)?\s*(\d+)x\s+(.+)$/);
+    if (!match) continue;
+    const quantity = parseInt(match[1]);
+    const name = match[2].trim();
+    // Busca preço no cardápio pelo nome
+    const prod = cardapio.find(p => (p.name || "").trim() === name);
+    const price = prod ? Number(prod.price || 0) : 0;
+    const categoria = prod ? (prod.categoria || "") : "";
+    const tipo = prod ? (prod.tipo || "") : "";
+    itens.push({ name, price, quantity, categoria, tipo });
+  }
+  return itens;
+}
+
+// Converte array de itens de volta pro formato texto do cliente.html
+function itensToPedidoTexto(itens) {
+  let fritos = "";
+  let crus = "";
+  for (const item of itens) {
+    const qty = Number(item.quantity || item.qty || item.quantidade || 0);
+    if (qty <= 0) continue;
+    const nome = item.name || item.nome || "Item";
+    const tipoEmoji = item.tipo === "quente" ? "🍗" : item.tipo === "fria" ? "🥐" : "✅";
+    const linha = `${tipoEmoji} ${qty}x ${nome}\n`;
+    if (item.categoria === "crus") crus += linha;
+    else fritos += linha;
+  }
+  let texto = "";
+  if (fritos) texto += "———————🔥fritos🔥———————\n" + fritos;
+  if (crus)   texto += "———————❄️ crus ❄️———————\n" + crus;
+  return texto;
+}
+
 async function abrirPedidoCliente(cliente, editavel) {
   try {
-    // Busca último pedido não entregue do cliente, ou o mais recente
+    // Busca últimos pedidos do cliente
     const url = SUPABASE_URL + "/rest/v1/pedidos?select=*&customer_phone=eq." +
-      encodeURIComponent(cliente.phone) + "&order=created_at.desc&limit=1";
+      encodeURIComponent(cliente.phone) + "&order=created_at.desc&limit=10";
     const rows = await (await fetch(url, { headers: SB_H })).json();
 
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -1281,14 +1322,19 @@ async function abrirPedidoCliente(cliente, editavel) {
       return;
     }
 
-    const pedido = rows[0];
-    let itens = [];
-    try { itens = JSON.parse(pedido.items || "[]"); } catch(e) { itens = []; }
-
-    // Busca cardápio para ter preços e nomes completos
+    // Busca cardápio (necessário para preços ao fazer parse do texto)
     const cardapio = await (await fetch(SUPABASE_URL + "/rest/v1/cardapio?select=*&available=eq.true", { headers: SB_H })).json();
+    const cardapioArr = Array.isArray(cardapio) ? cardapio : [];
 
-    pedidoAtual = { cliente, pedido, itens: JSON.parse(JSON.stringify(itens)), cardapio: Array.isArray(cardapio) ? cardapio : [], editavel };
+    // Pega o pedido mais recente que tenha itens
+    let pedido = rows[0];
+    let itens = [];
+    for (const row of rows) {
+      const parsed = parsePedidoTexto(row.items, cardapioArr);
+      if (parsed.length > 0) { pedido = row; itens = parsed; break; }
+    }
+
+    pedidoAtual = { cliente, pedido, itens: JSON.parse(JSON.stringify(itens)), cardapio: cardapioArr, editavel };
     renderModalPedido();
     document.getElementById("pedido-overlay").classList.add("open");
 
@@ -1378,12 +1424,13 @@ async function salvarPedido() {
   document.getElementById("btn-pedido-salvar").disabled = true;
 
   try {
+    const novoTexto = itensToPedidoTexto(itensFiltrados);
     await sbUpdate("pedidos", { id: pedido.id }, {
-      items: JSON.stringify(itensFiltrados),
+      items: novoTexto,
       total: novoTotal
     });
 
-    pedidoAtual.pedido.items = JSON.stringify(itensFiltrados);
+    pedidoAtual.pedido.items = novoTexto;
     pedidoAtual.pedido.total = novoTotal;
     pedidoAtual._novoTotal = novoTotal;
 
@@ -1422,8 +1469,7 @@ function formatarResumoItens(itens) {
 function enviarComprovanteAlteracaoWpp() {
   if (!pedidoAtual) return;
   const { cliente, pedido } = pedidoAtual;
-  let itens = [];
-  try { itens = JSON.parse(pedido.items || "[]"); } catch(e) {}
+  let itens = parsePedidoTexto(pedido.items, pedidoAtual.cardapio || []);
   const novoTotal = pedidoAtual._novoTotal || Number(pedido.total || 0);
   const dh = dataHoraSP();
   const resumo = formatarResumoItens(itens);
