@@ -109,6 +109,9 @@
       <div class="cfg-section-title">Chave da API (manual)</div>
       <div id="key-grid" class="key-grid"></div>
       <div id="cfg-key-label" style="color:#8696A0;font-size:11px;margin-top:-12px;margin-bottom:18px;text-align:center;"></div>
+      <div class="cfg-section-title" style="margin-top:16px;">Diagnóstico</div>
+      <button onclick="diagnosticar()" style="width:100%;padding:10px;background:#2A3942;color:#E9EDEF;border:none;border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px;">🔍 Testar conexão com Gemini</button>
+      <div id="diag-result" style="color:#8696A0;font-size:12px;text-align:center;min-height:18px;margin-bottom:16px;"></div>
       <button id="cfg-close" onclick="fecharCfg()">Fechar</button>
     </div>
   </div>
@@ -1092,6 +1095,33 @@ function lerPixDaURL() {
     hora,
     remetente: nome + ' ' + sobrenome
   };
+}
+
+async function diagnosticar() {
+  const el = document.getElementById('diag-result');
+  el.style.color = '#8696A0';
+  el.textContent = 'Testando...';
+  try {
+    const chave = GEMINI_KEYS[geminiKeyIndex];
+    if (!chave || chave.includes('GEMINI_KEYS')) {
+      el.style.color = '#f87171';
+      el.textContent = '❌ Chave não configurada!';
+      return;
+    }
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODELS[geminiModelIndex].id + ':generateContent?key=' + chave;
+    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({contents:[{parts:[{text:'oi'}]}]}) });
+    if (res.ok) {
+      el.style.color = '#25D366';
+      el.textContent = '✅ Conexão OK! Chave funcionando.';
+    } else {
+      const err = await res.json();
+      el.style.color = '#f87171';
+      el.textContent = '❌ Erro ' + res.status + ': ' + (err?.error?.message || 'falha na API');
+    }
+  } catch(e) {
+    el.style.color = '#f87171';
+    el.textContent = '❌ Erro de rede: ' + e.message;
+  }
 }
 
 setTimeout(() => {
