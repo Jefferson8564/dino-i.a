@@ -103,7 +103,12 @@
   <div id="cfg-overlay" onclick="fecharCfgFora(event)">
     <div id="cfg-box">
       <h2>⚙️ Configurações</h2>
-      <p>Powered by <strong style="color:#25D366">Gemini 2.0 Flash</strong> — troca automática em caso de limite.</p>
+      <p id="cfg-model-label">Powered by <strong style="color:#25D366">Gemini 2.5 Flash</strong> — troca automática em caso de limite.</p>
+      <div class="cfg-section-title">Modelo</div>
+      <div id="model-list" class="model-list"></div>
+      <div class="cfg-section-title">Chave da API (manual)</div>
+      <div id="key-grid" class="key-grid"></div>
+      <div id="cfg-key-label" style="color:#8696A0;font-size:11px;margin-top:-12px;margin-bottom:18px;text-align:center;"></div>
       <button id="cfg-close" onclick="fecharCfg()">Fechar</button>
     </div>
   </div>
@@ -125,25 +130,21 @@
 const SUPABASE_URL = "https://vpeyqgijajywgswmezlh.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwZXlxZ2lqYWp5d2dzd21lemxoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNTM1MDIsImV4cCI6MjA4NjgyOTUwMn0.LA5Cbof7IKWAA7l8YbCuPzANpCy0rX_Dro4l9fcDgoQ";
 // ── GEMINI API ──
-const GEMINI_KEYS = [
-  "AIzaSyCieYb4fI1FLWDQ8LpztAGL_ZinXagFexM", // chave 1
-  "AIzaSyBsEmGgs_8pZNZ8psQu9E0fMuM26kVs8Zk", // chave 2
-  "AIzaSyAMyJC9gYcb_-plzQHuy9dw5TqOGZU-J_g", // chave 3
-  "AIzaSyDDjKn0ufWcH9JGD3tPHkUmXoFqlMID1lM", // chave 4
-  "AIzaSyBMPqUNRkwD7xikoleQXA8ijBXv0SNVLjU",  // chave 5
-  "AIzaSyDfA5LotnfT20Q6le979SfMQtXucD_VdMc",  // chave 6
-  "AIzaSyDOGRIqShVegIyHjivq-qd2sRG7v8NuH_g",  // chave 7
-  "AIzaSyDNysrvoHPQVX9ipN8YqES7WkE7I7Qgym8",  // chave 8
-  "AIzaSyAyhoVG48vtf8Brk25o4gbulWTtshelp58",   // chave 9
-  "AIzaSyCRz3q5BBA5CQZHSzCAcDgDO-HDHIX2Jxk",  // chave 10
+const GEMINI_KEYS = __GEMINI_KEYS__;
+let geminiKeyIndex = (() => { try { const s = localStorage.getItem("dino_gemini_key_idx"); return s !== null ? parseInt(s) : 0; } catch(e) { return 0; } })();
+const GEMINI_MODELS = [
+  { id: "gemini-2.5-flash",      nome: "2.5 Flash" },
+  { id: "gemini-2.0-flash",      nome: "2.0 Flash (estável)" },
+  { id: "gemini-2.0-flash-lite", nome: "2.0 Flash Lite" },
 ];
-let geminiKeyIndex = 0;
-const GEMINI_MODEL = "gemini-2.5-flash";
+let geminiModelIndex = (() => { try { const s = localStorage.getItem("dino_gemini_model_idx"); return s !== null ? parseInt(s) : 0; } catch(e) { return 0; } })();
+const GEMINI_MODEL = () => GEMINI_MODELS[geminiModelIndex].id;
 
 async function geminiRequest(systemPrompt, mensagens) {
+  let ultimoErro = "";
   for (let tentativa = 0; tentativa < GEMINI_KEYS.length; tentativa++) {
     const chave = GEMINI_KEYS[geminiKeyIndex];
-    const url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent";
+    const url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL() + ":generateContent";
     const contents = [];
     for (const m of mensagens) {
       contents.push({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] });
@@ -160,25 +161,24 @@ async function geminiRequest(systemPrompt, mensagens) {
         body: JSON.stringify(body)
       });
       const json = await res.json();
-      // Checa erro no HTTP status OU dentro do JSON (Gemini às vezes retorna 200 com erro no body)
       const errCode = json?.error?.code || res.status;
       if (errCode === 429 || errCode === 401 || errCode === 403) {
+        ultimoErro = "Chave " + (geminiKeyIndex+1) + ": " + (json?.error?.message || errCode);
         geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length;
         continue;
       }
-      if (!res.ok || json?.error) return { erro: "Erro na API (" + errCode + ")." };
+      if (!res.ok || json?.error) return { erro: "Erro na API (" + errCode + "): " + (json?.error?.message || "") };
       const texto = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
       if (!texto) {
-        // Candidato bloqueado ou vazio — tenta próxima chave
         geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length;
         continue;
       }
       return { ok: true, texto };
     } catch(e) {
-      return { erro: "Erro de conexão." };
+      return { erro: "Erro de conexão: " + e.message };
     }
   }
-  return { erro: "Limite atingido. Tente em alguns minutos." };
+  return { erro: "Todas as chaves falharam com o modelo " + GEMINI_MODEL() + ".\n\nÚltimo erro: " + ultimoErro + "\n\nTente trocar o modelo em ⚙️ Configurações." };
 }
 
 const SB_H = { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json" };
@@ -514,27 +514,29 @@ async function detectarIntencao(texto) {
   const regexResult = detectarPorRegex(texto);
   if (regexResult) return regexResult;
 
-  const system = `Voce e Lara, assistente do sistema "O Rei da Coxinha".
-Sua funcao e identificar pagamentos/quitacoes e consultas de saldo de clientes.
-Responda SOMENTE com JSON puro, sem markdown, sem explicacao.
-Se for pagamento ou quitacao: {"acao":"pagamento","cliente":"NOME","valor":NUMERO}
-Se valor nao mencionado ou for "zero/zerar/quitar/quitado", use 0: {"acao":"pagamento","cliente":"NOME","valor":0}
-Se for consulta de saldo/divida/informacoes/dados de UM cliente especifico: {"acao":"consulta","cliente":"NOME"} — use o nome do historico se nao mencionar nome novo.
-Se for pedido para listar TODOS os clientes com divida/debito/duvida (sem citar nome especifico de pessoa), ou pergunta sobre dividas/duvidas de clientes no geral: {"acao":"lista_devedores"}
-Se for pedido para listar TODOS os clientes com credito/saldo positivo (sem citar nome especifico): {"acao":"lista_credores"}
-Se for pedido de comprovantes de um cliente especifico (com ou sem filtro de data): {"acao":"comprovantes","cliente":"NOME","data_inicio":"DD/MM/AAAA","data_fim":"DD/MM/AAAA"} — se nao mencionar datas, omita os campos de data.
-Se nao for nenhuma das opcoes acima: {"acao":"outro","resposta":"resposta amigavel curta"}
-IMPORTANTE: o campo "cliente" deve ser SEMPRE um nome de pessoa real. NUNCA coloque frases ou textos longos no campo "cliente".
-IMPORTANTE: palavras com erro de digitacao ou voz devem ser interpretadas pelo contexto. "divida", "duvida", "devida" = divida. "crente", "cliente", "clente" = cliente. "credito", "creditu" = credito.
-Exemplos de pagamento: "Jefferson pagou 50", "maria 30 reais", "joao pagou", "lanca 25 do pedro", "quita a divida do carlos", "zera o saldo da ana", "jefferson quitado"
-Exemplos de consulta: "qual a divida do Jefferson", "quanto a Maria deve", "qual o saldo dele", "me fala do joao"
-Exemplos de lista_devedores: "quais clientes tem divida", "quem deve", "lista os devedores", "todos os clientes", "qual os clientes que tem divida", "quais tem debito", "na frente com divida", "quem esta com duvida", "quem esta devendo", "me fala de todos os clientes", "qual as duvidas", "qual as duvidas dos clientes", "quanto o cliente ta devendo", "quando os clientes deve", "quais as dividas", "me mostra as dividas", "os clientes devendo", "quanto os clientes devem", "qual a divida dos clientes", "mostre os devedores", "clientes com divida", "quem tem divida", "as duvidas dos clientes", "qual cliente deve"
-Exemplos de lista_credores: "quais clientes tem credito", "quem tem saldo positivo", "qual crente com credito", "quem esta com credito", "lista os que tem credito", "quem tem saldo a favor"
-Exemplos de comprovantes: "me manda os comprovantes do Jefferson", "comprovantes da Maria", "comprovantes do joao de 01/04/2026 ate 17/04/2026", "historico de pagamentos do pedro", "todos os comprovantes da ana"`;
+  // ── Saudações e respostas genéricas → responde localmente sem chamar a IA ──
+  const t0 = normStr(texto);
+  const saudacoes = /^(oi+|ola+|ol[aá]|hey|e a[ií]|ta a[ií]|ta ai|ta aqui|tudo bem|tudo bom|bom dia|boa tarde|boa noite|ok|certo|blz|beleza|valeu|obrigad[oa]|otimo|perfeito|entendi|sim|nao|nao entendi|teste|test)\.?!?$/;
+  if (saudacoes.test(t0)) {
+    const respostas = ["Olá! Como posso ajudar?","Oi! O que precisa?","Estou aqui.","Pode falar.","Oi!","Olá!"];
+    return { acao:"outro", resposta: respostas[Math.floor(Math.random() * respostas.length)] };
+  }
+
+  const system = `Assistente do "O Rei da Coxinha". Identifica a intenção da mensagem.
+Responda SOMENTE JSON puro, sem markdown.
+Pagamento/quitação: {"acao":"pagamento","cliente":"NOME","valor":NUMERO}
+Valor 0 se não mencionado ou "quitar/zerar": {"acao":"pagamento","cliente":"NOME","valor":0}
+Consulta de saldo de UM cliente: {"acao":"consulta","cliente":"NOME"}
+Listar TODOS devedores (sem nome): {"acao":"lista_devedores"}
+Listar TODOS credores (sem nome): {"acao":"lista_credores"}
+Comprovantes de cliente: {"acao":"comprovantes","cliente":"NOME","data_inicio":"DD/MM/AAAA","data_fim":"DD/MM/AAAA"}
+Outro: {"acao":"outro","resposta":"resposta curta"}
+"cliente" deve ser nome de pessoa, nunca frase longa.
+Erros de digitação: "duvida"="divida", "clente"="cliente", "creditu"="credito".`;
 
   try {
-    const msgs = [...historico.slice(-6), { role:"user", content:texto }];
-    const resultado = await geminiRequest(system, msgs);
+    // Envia só a mensagem atual — sem histórico (intenção é autocontida)
+    const resultado = await geminiRequest(system, [{ role:"user", content:texto }]);
     if (resultado.erro) return { acao:"outro", resposta: resultado.erro };
 
     const raw = resultado.texto;
@@ -1001,32 +1003,44 @@ function renderKeyGrid() {
   const grid = document.getElementById("key-grid");
   if (!grid) return;
   grid.innerHTML = "";
-  for (let i = 0; i < GROQ_KEYS.length; i++) {
+  for (let i = 0; i < GEMINI_KEYS.length; i++) {
     const btn = document.createElement("div");
-    btn.className = "key-num" + (i === groqKeyIndex ? " active" : "");
+    btn.className = "key-num" + (i === geminiKeyIndex ? " active" : "");
     btn.textContent = i + 1;
-    btn.onclick = () => { groqKeyIndex = i; renderKeyGrid(); };
+    btn.onclick = () => {
+      geminiKeyIndex = i;
+      try { localStorage.setItem("dino_gemini_key_idx", i); } catch(e) {}
+      renderKeyGrid();
+      const lbl = document.getElementById("cfg-key-label");
+      if (lbl) lbl.textContent = "✔ Chave " + (i+1) + " selecionada";
+    };
     grid.appendChild(btn);
   }
+  const lbl = document.getElementById("cfg-key-label");
+  if (lbl) lbl.textContent = "Chave " + (geminiKeyIndex+1) + " em uso";
 }
 function renderModelList() {
   const list = document.getElementById("model-list");
   if (!list) return;
   list.innerHTML = "";
-  for (let i = 0; i < MODELOS.length; i++) {
+  for (let i = 0; i < GEMINI_MODELS.length; i++) {
     const item = document.createElement("div");
-    item.className = "model-item" + (i === modeloIndex ? " active" : "");
-    item.textContent = MODELOS[i].nome;
+    item.className = "model-item" + (i === geminiModelIndex ? " active" : "");
+    item.textContent = GEMINI_MODELS[i].nome;
     item.onclick = () => {
-      modeloIndex = i;
-      try { localStorage.setItem("dino_modelo_idx", i); } catch(e) {}
+      geminiModelIndex = i;
+      try { localStorage.setItem("dino_gemini_model_idx", i); } catch(e) {}
       renderModelList();
+      const lbl = document.getElementById("cfg-model-label");
+      if (lbl) lbl.innerHTML = "Modelo: <strong style='color:#25D366'>" + GEMINI_MODELS[i].nome + "</strong>";
     };
     list.appendChild(item);
   }
 }
 function abrirCfg() {
   document.getElementById("cfg-overlay").classList.add("open");
+  renderModelList();
+  renderKeyGrid();
 }
 function fecharCfg() {
   document.getElementById("cfg-overlay").classList.remove("open");
