@@ -555,13 +555,17 @@ function detectarPorRegex(texto) {
     return { acao:"lista_credores" };
   }
 
-  // ── PEDIDO: ver / editar / alterar ──
-  if (/\bpedido\b/.test(t)) {
+  // ── PEDIDO: ver / editar / listar todos ──
+  if (/\bpedidos?\b/.test(t)) {
     const nome = extrairNome(t);
     if (/\beditar\b|\balterar\b|\bmudar\b|\bmodificar\b|\batualizar\b/.test(t)) {
       return { acao:"editar_pedido", cliente: nome };
     }
-    if (/\bver\b|\bveja\b|\bmostr[ae]\b|\bqual\b|\bquais\b|\blistar\b|\blistar\b/.test(t)) {
+    // "todos os pedidos", "listar pedidos", "mostrar pedidos", "historico"
+    if (/\btodos\b|\blistar\b|\bhistorico\b|\bhist[oó]rico\b|\btodas\b/.test(t)) {
+      return { acao:"listar_pedidos", cliente: nome };
+    }
+    if (/\bver\b|\bveja\b|\bmostr[ae]\b|\bqual\b|\bquais\b/.test(t)) {
       return { acao:"ver_pedido", cliente: nome };
     }
     // genérico: mencionou pedido + nome → ver
@@ -595,6 +599,7 @@ Listar TODOS credores (sem nome): {"acao":"lista_credores"}
 Comprovantes de cliente: {"acao":"comprovantes","cliente":"NOME","data_inicio":"DD/MM/AAAA","data_fim":"DD/MM/AAAA"}
 Ver pedido de cliente: {"acao":"ver_pedido","cliente":"NOME"}
 Editar/alterar pedido de cliente: {"acao":"editar_pedido","cliente":"NOME"}
+Listar todos os pedidos de cliente: {"acao":"listar_pedidos","cliente":"NOME"}
 Outro: {"acao":"outro","resposta":"resposta curta"}
 "cliente" deve ser nome de pessoa, nunca frase longa.
 Erros de digitação: "duvida"="divida", "clente"="cliente", "creditu"="credito", "peddo"="pedido".`;
@@ -812,6 +817,14 @@ async function processarTexto(texto) {
         pendenteSug = null;
         ocupado = false; setStatus(false);
         await abrirPedidoCliente(escolha, aEditar);
+        return;
+      }
+
+      // ── Rota: listar_pedidos ──
+      if (pendenteSug.acao === "listar_pedidos") {
+        pendenteSug = null;
+        ocupado = false; setStatus(false);
+        await listarTodosPedidos(escolha);
         return;
       }
 
@@ -1080,6 +1093,35 @@ async function processarTexto(texto) {
       await abrirPedidoCliente(cliPed, intencao.acao === "editar_pedido");
       ocupado = false; setStatus(false);
 
+    } else if (intencao.acao === "listar_pedidos") {
+      const clientes = await carregarClientes();
+      const nomeQuery = intencao.cliente || "";
+      const resultado = nomeQuery ? encontrarCliente(clientes, nomeQuery) : null;
+      document.getElementById("typing").style.display = "none";
+
+      if (!resultado) {
+        const resp = nomeQuery
+          ? "Nao encontrei nenhum cliente com o nome \"" + nomeQuery + "\"."
+          : "Pode me dizer o nome do cliente?";
+        addMsg("bot", resp);
+        historico.push({ role:"assistant", content:resp });
+        ocupado = false; setStatus(false);
+        return;
+      }
+
+      if (!resultado.exato) {
+        const lista = resultado.sugestoes.map((s,i) => (i+1) + ". " + s.name).join("\n");
+        const resp = "Nao achei \"" + nomeQuery + "\" exato. Voce quis dizer?\n\n" + lista + "\n\nResponda com o nome ou numero.";
+        addMsg("bot", resp);
+        historico.push({ role:"assistant", content:resp });
+        pendenteSug = { acao:"listar_pedidos", sugestoes: resultado.sugestoes };
+        ocupado = false; setStatus(false);
+        return;
+      }
+
+      await listarTodosPedidos(resultado.cliente);
+      ocupado = false; setStatus(false);
+
     } else {
       addMsg("bot", resp);
       historico.push({ role:"assistant", content:resp });
@@ -1267,6 +1309,45 @@ setTimeout(() => {
 
 // ── PEDIDOS ──────────────────────────────────────────────────────
 let pedidoAtual = null;   // { cliente, pedido (db row), itens[], cardapio[], editavel }
+
+
+async function listarTodosPedidos(cliente) {
+  try {
+    const cardapio = await (await fetch(SUPABASE_URL + "/rest/v1/cardapio?select=*&available=eq.true", { headers: SB_H })).json();
+    const cardapioArr = Array.isArray(cardapio) ? cardapio : [];
+
+    const url = SUPABASE_URL + "/rest/v1/pedidos?select=*&customer_phone=eq." +
+      encodeURIComponent(cliente.phone) + "&order=created_at.desc";
+    const rows = await (await fetch(url, { headers: SB_H })).json();
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      const msg = "Nenhum pedido encontrado para " + cliente.name + ".";
+      addMsg("bot", msg);
+      historico.push({ role:"assistant", content:msg });
+      return;
+    }
+
+    let texto = "📋 Pedidos de " + cliente.name + " (" + rows.length + "):\n\n";
+    rows.forEach((pedido, idx) => {
+      const data = new Date(pedido.created_at);
+      const dh = data.toLocaleString("pt-BR", { timeZone:"America/Sao_Paulo", day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
+      const total = Number(pedido.total || 0).toFixed(2).replace(".", ",");
+      const itens = parsePedidoTexto(pedido.items, cardapioArr);
+      const resumo = itens.length > 0
+        ? itens.map(i => i.quantity + "x " + i.name).join(", ")
+        : (pedido.items || "sem itens").split("\n").filter(l => l.trim() && !l.startsWith("———") && !l.startsWith("🏷️") && !l.startsWith("💳")).map(l => l.trim()).join(", ") || "sem itens";
+      const pagamento = pedido.payment_method || "";
+      texto += (idx+1) + ". " + dh + "\n";
+      texto += "   " + resumo + "\n";
+      texto += "   💰 R$ " + total + (pagamento ? "  •  " + pagamento : "") + "\n\n";
+    });
+
+    addMsg("bot", texto.trim());
+    historico.push({ role:"assistant", content: texto.trim() });
+  } catch(e) {
+    addMsg("bot", "Erro ao listar pedidos: " + e.message);
+  }
+}
 
 // Converte o texto do cliente.html para array [{name, price, quantity, categoria}]
 function parsePedidoTexto(texto, cardapio) {
