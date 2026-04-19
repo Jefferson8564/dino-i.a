@@ -107,6 +107,8 @@
   .pedido-btns button { flex:1; padding:12px; border:none; border-radius:12px; font-weight:700; font-size:14px; cursor:pointer; }
   #btn-pedido-salvar  { background:#25D366; color:#fff; }
   #btn-pedido-salvar:active  { background:#1da855; }
+  #btn-pedido-editar { background:#1D3A4F; color:#53BDEB; }
+  #btn-pedido-editar:active { background:#163040; }
   #btn-pedido-cancelar { background:#3D4A50; color:#E9EDEF; }
   #btn-pedido-cancelar:active { background:#2A3942; }
   #btn-pedido-wpp { width:100%; padding:11px; border:none; border-radius:12px; background:#005C4B; color:#E9EDEF; font-weight:700; font-size:14px; cursor:pointer; margin-top:8px; display:none; }
@@ -157,6 +159,7 @@
         <div id="pedido-total-line">Total: <strong id="pedido-total-valor">R$ 0,00</strong></div>
         <div class="pedido-btns">
           <button class="pedido-btns" id="btn-pedido-cancelar" onclick="fecharPedido()">✕ Fechar</button>
+          <button class="pedido-btns" id="btn-pedido-editar" onclick="ativarEdicaoPedido()">✏️ Mudar Pedido</button>
           <button class="pedido-btns" id="btn-pedido-salvar" onclick="salvarPedido()">✅ Salvar</button>
         </div>
         <button id="btn-pedido-wpp" onclick="enviarComprovanteAlteracaoWpp()">📲 Enviar comprovante no WhatsApp</button>
@@ -1433,6 +1436,7 @@ function renderModalPedido() {
     ? "Ajuste as quantidades e salve"
     : "Pedido mais recente (somente leitura)";
   document.getElementById("btn-pedido-salvar").style.display = editavel ? "" : "none";
+  document.getElementById("btn-pedido-editar").style.display = editavel ? "none" : "";
   document.getElementById("btn-pedido-wpp").style.display = "none";
 
   const container = document.getElementById("pedido-items");
@@ -1571,6 +1575,12 @@ function enviarComprovanteAlteracaoWpp() {
   const tel = String(cliente.phone).replace(/\D/g, "");
   const link = "https://wa.me/" + (tel.startsWith("55") ? tel : "55" + tel) + "?text=" + encodeURIComponent(msg);
   window.open(link, "_blank");
+}
+
+function ativarEdicaoPedido() {
+  if (!pedidoAtual) return;
+  pedidoAtual.editavel = true;
+  renderModalPedido();
 }
 
 function fecharPedido() {
