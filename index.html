@@ -103,15 +103,13 @@
   <div id="cfg-overlay" onclick="fecharCfgFora(event)">
     <div id="cfg-box">
       <h2>⚙️ Configurações</h2>
-      <p id="cfg-model-label">Powered by <strong style="color:#25D366">Gemini 2.5 Flash</strong> — troca automática em caso de limite.</p>
-      <div class="cfg-section-title">Modelo</div>
-      <div id="model-list" class="model-list"></div>
+      <p id="cfg-model-label">Powered by <strong style="color:#25D366">Gemini 2.5 Flash</strong> — troca automática de chave no limite.</p>
       <div class="cfg-section-title">Chave da API (manual)</div>
       <div id="key-grid" class="key-grid"></div>
       <div id="cfg-key-label" style="color:#8696A0;font-size:11px;margin-top:-12px;margin-bottom:18px;text-align:center;"></div>
-      <div class="cfg-section-title" style="margin-top:16px;">Diagnóstico</div>
-      <button onclick="diagnosticar()" style="width:100%;padding:10px;background:#2A3942;color:#E9EDEF;border:none;border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px;">🔍 Testar conexão com Gemini</button>
-      <div id="diag-result" style="color:#8696A0;font-size:12px;text-align:center;min-height:18px;margin-bottom:16px;"></div>
+      <div class="cfg-section-title" style="margin-top:16px;">Chaves da API</div>
+      <button onclick="mostrarGuiaChaves()" style="width:100%;padding:10px;background:#2A3942;color:#E9EDEF;border:none;border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px;">🔑 Como adicionar mais chaves</button>
+      <div id="key-guide" style="display:none;background:#1a2730;border-radius:10px;padding:12px;margin-bottom:14px;color:#E9EDEF;font-size:12px;line-height:1.7;"></div>
       <button id="cfg-close" onclick="fecharCfg()">Fechar</button>
     </div>
   </div>
@@ -136,9 +134,7 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const GEMINI_KEYS = __GEMINI_KEYS__;
 let geminiKeyIndex = (() => { try { const s = localStorage.getItem("dino_gemini_key_idx"); return s !== null ? parseInt(s) : 0; } catch(e) { return 0; } })();
 const GEMINI_MODELS = [
-  { id: "gemini-2.5-flash",      nome: "2.5 Flash" },
-  { id: "gemini-2.0-flash",      nome: "2.0 Flash (estável)" },
-  { id: "gemini-2.0-flash-lite", nome: "2.0 Flash Lite" },
+  { id: "gemini-2.5-flash", nome: "2.5 Flash" },
 ];
 let geminiModelIndex = (() => { try { const s = localStorage.getItem("dino_gemini_model_idx"); return s !== null ? parseInt(s) : 0; } catch(e) { return 0; } })();
 const GEMINI_MODEL = () => GEMINI_MODELS[geminiModelIndex].id;
@@ -181,7 +177,7 @@ async function geminiRequest(systemPrompt, mensagens) {
       return { erro: "Erro de conexão: " + e.message };
     }
   }
-  return { erro: "Todas as chaves falharam com o modelo " + GEMINI_MODEL() + ".\n\nÚltimo erro: " + ultimoErro + "\n\nTente trocar o modelo em ⚙️ Configurações." };
+  return { erro: "Todas as chaves falharam com o modelo " + GEMINI_MODEL() + ".\n\nÚltimo erro: " + ultimoErro + "\n\nAdicione mais chaves em ⚙️ Configurações." };
 }
 
 const SB_H = { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json" };
@@ -1097,31 +1093,20 @@ function lerPixDaURL() {
   };
 }
 
-async function diagnosticar() {
-  const el = document.getElementById('diag-result');
-  el.style.color = '#8696A0';
-  el.textContent = 'Testando...';
-  try {
-    const chave = GEMINI_KEYS[geminiKeyIndex];
-    if (!chave || chave.includes('GEMINI_KEYS')) {
-      el.style.color = '#f87171';
-      el.textContent = '❌ Chave não configurada!';
-      return;
-    }
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODELS[geminiModelIndex].id + ':generateContent?key=' + chave;
-    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({contents:[{parts:[{text:'oi'}]}]}) });
-    if (res.ok) {
-      el.style.color = '#25D366';
-      el.textContent = '✅ Conexão OK! Chave funcionando.';
-    } else {
-      const err = await res.json();
-      el.style.color = '#f87171';
-      el.textContent = '❌ Erro ' + res.status + ': ' + (err?.error?.message || 'falha na API');
-    }
-  } catch(e) {
-    el.style.color = '#f87171';
-    el.textContent = '❌ Erro de rede: ' + e.message;
-  }
+function mostrarGuiaChaves() {
+  const el = document.getElementById('key-guide');
+  if (el.style.display === 'block') { el.style.display = 'none'; return; }
+  el.innerHTML = `<strong style="color:#25D366">📋 Passo a passo:</strong><br><br>
+1️⃣ Acesse <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#53BDEB;">aistudio.google.com</a> e crie uma chave gratuita.<br><br>
+2️⃣ Acesse:<br>
+<span style="color:#53BDEB;">github.com/Jefferson8564/dino-i.a/settings/secrets/actions</span><br><br>
+3️⃣ Clique no ✏️ lápis do <strong>GEMINI_KEYS</strong><br><br>
+4️⃣ No campo Value coloque:<br>
+<span style="color:#25D366;font-family:monospace;">["chave1","chave2","chave3"]</span><br><br>
+5️⃣ Clique em <strong>Update secret</strong><br><br>
+6️⃣ Edite qualquer arquivo no repositório e salve para disparar o deploy.<br><br>
+<span style="color:#8696A0;">💡 Use chaves de contas Google diferentes para maior limite.</span>`;
+  el.style.display = 'block';
 }
 
 setTimeout(() => {
