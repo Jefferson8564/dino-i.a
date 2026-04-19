@@ -82,6 +82,35 @@
   .model-item { background:#1E2D36; border:1.5px solid #2A3942; border-radius:10px; padding:10px 14px; color:#8696A0; font-size:13px; cursor:pointer; transition: all .15s; user-select:none; -webkit-user-select:none; }
   .model-item.active { background:#0d2e1e; border-color:#25D366; color:#25D366; font-weight:600; }
   .model-item:active { transform:scale(.98); }
+
+  /* ── MODAL PEDIDO ── */
+  #pedido-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:200; justify-content:center; align-items:flex-end; }
+  #pedido-overlay.open { display:flex; }
+  #pedido-box { background:#111B21; border-radius:18px 18px 0 0; width:100%; max-width:480px; max-height:85dvh; display:flex; flex-direction:column; animation: slideUp .22s ease; }
+  #pedido-header { padding:16px 20px 10px; border-bottom:1px solid #2A3942; flex-shrink:0; }
+  #pedido-header h2 { color:#E9EDEF; font-size:15px; font-weight:700; }
+  #pedido-header p  { color:#8696A0; font-size:12px; margin-top:3px; }
+  #pedido-items { overflow-y:auto; flex:1; padding:10px 16px; }
+  #pedido-items::-webkit-scrollbar { width:3px; }
+  #pedido-items::-webkit-scrollbar-thumb { background:#2A3942; border-radius:3px; }
+  .pedido-item { display:flex; align-items:center; justify-content:space-between; background:#1E2D36; border-radius:12px; padding:10px 14px; margin-bottom:8px; gap:10px; }
+  .pedido-item-nome { color:#E9EDEF; font-size:14px; flex:1; }
+  .pedido-item-preco { color:#8696A0; font-size:12px; }
+  .pedido-qty { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .pedido-qty button { width:30px; height:30px; border-radius:50%; border:none; background:#2A3942; color:#E9EDEF; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; user-select:none; -webkit-user-select:none; transition:background .12s; }
+  .pedido-qty button:active { background:#3D4A50; }
+  .pedido-qty span { color:#E9EDEF; font-size:15px; font-weight:700; min-width:20px; text-align:center; }
+  #pedido-footer { padding:12px 16px 28px; border-top:1px solid #2A3942; flex-shrink:0; }
+  #pedido-total-line { color:#E9EDEF; font-size:14px; margin-bottom:12px; text-align:center; }
+  #pedido-total-line strong { color:#25D366; font-size:17px; }
+  .pedido-btns { display:flex; gap:8px; }
+  .pedido-btns button { flex:1; padding:12px; border:none; border-radius:12px; font-weight:700; font-size:14px; cursor:pointer; }
+  #btn-pedido-salvar  { background:#25D366; color:#fff; }
+  #btn-pedido-salvar:active  { background:#1da855; }
+  #btn-pedido-cancelar { background:#3D4A50; color:#E9EDEF; }
+  #btn-pedido-cancelar:active { background:#2A3942; }
+  #btn-pedido-wpp { width:100%; padding:11px; border:none; border-radius:12px; background:#005C4B; color:#E9EDEF; font-weight:700; font-size:14px; cursor:pointer; margin-top:8px; display:none; }
+  #btn-pedido-wpp:active { background:#004035; }
 </style>
 </head>
 <body>
@@ -116,6 +145,25 @@
       <button id="cfg-close" onclick="fecharCfg()">Fechar</button>
     </div>
   </div>
+  <!-- MODAL EDITAR PEDIDO -->
+  <div id="pedido-overlay" onclick="fecharPedidoFora(event)">
+    <div id="pedido-box">
+      <div id="pedido-header">
+        <h2>📋 Pedido de <span id="pedido-nome-cliente"></span></h2>
+        <p id="pedido-subtitulo">Ajuste as quantidades e salve</p>
+      </div>
+      <div id="pedido-items"></div>
+      <div id="pedido-footer">
+        <div id="pedido-total-line">Total: <strong id="pedido-total-valor">R$ 0,00</strong></div>
+        <div class="pedido-btns">
+          <button class="pedido-btns" id="btn-pedido-cancelar" onclick="fecharPedido()">✕ Fechar</button>
+          <button class="pedido-btns" id="btn-pedido-salvar" onclick="salvarPedido()">✅ Salvar</button>
+        </div>
+        <button id="btn-pedido-wpp" onclick="enviarComprovanteAlteracaoWpp()">📲 Enviar comprovante no WhatsApp</button>
+      </div>
+    </div>
+  </div>
+
   <div id="wallpaper"></div>
   <div id="messages">
     <div class="date-pill"><span id="datePill"></span></div>
@@ -394,7 +442,7 @@ function enviarComprovanteWpp(phone, nome, valor, novoSaldo, novTk, novDi) {
   if (novDi > 0) extras += "\n💎 +" + novDi;
 
   const msg =
-    "👽 *𝔻𝕀ℕ𝕆 𝕚.𝔸*ᵃᵈᵐⁱⁿⁱˢᵗʳᵃᵈᵒʳ\n" +
+    "👽 *DINO i.A* administrador\n" +
     "aqui está seu comprovante de pagamento.\n" +
     "*O Rei da Coxinha* 🍗\n" +
     "──────────────────\n" +
@@ -507,6 +555,19 @@ function detectarPorRegex(texto) {
     return { acao:"lista_credores" };
   }
 
+  // ── PEDIDO: ver / editar / alterar ──
+  if (/\bpedido\b/.test(t)) {
+    const nome = extrairNome(t);
+    if (/\beditar\b|\balterar\b|\bmudar\b|\bmodificar\b|\batualizar\b/.test(t)) {
+      return { acao:"editar_pedido", cliente: nome };
+    }
+    if (/\bver\b|\bveja\b|\bmostr[ae]\b|\bqual\b|\bquais\b|\blistar\b|\blistar\b/.test(t)) {
+      return { acao:"ver_pedido", cliente: nome };
+    }
+    // genérico: mencionou pedido + nome → ver
+    if (nome) return { acao:"ver_pedido", cliente: nome };
+  }
+
   return null; // deixa a IA decidir
 }
 
@@ -532,9 +593,11 @@ Consulta de saldo de UM cliente: {"acao":"consulta","cliente":"NOME"}
 Listar TODOS devedores (sem nome): {"acao":"lista_devedores"}
 Listar TODOS credores (sem nome): {"acao":"lista_credores"}
 Comprovantes de cliente: {"acao":"comprovantes","cliente":"NOME","data_inicio":"DD/MM/AAAA","data_fim":"DD/MM/AAAA"}
+Ver pedido de cliente: {"acao":"ver_pedido","cliente":"NOME"}
+Editar/alterar pedido de cliente: {"acao":"editar_pedido","cliente":"NOME"}
 Outro: {"acao":"outro","resposta":"resposta curta"}
 "cliente" deve ser nome de pessoa, nunca frase longa.
-Erros de digitação: "duvida"="divida", "clente"="cliente", "creditu"="credito".`;
+Erros de digitação: "duvida"="divida", "clente"="cliente", "creditu"="credito", "peddo"="pedido".`;
 
   try {
     // Envia só a mensagem atual — sem histórico (intenção é autocontida)
@@ -740,6 +803,15 @@ async function processarTexto(texto) {
           document.getElementById("typing").style.display = "none";
           addMsg("bot", "Erro: " + e.message);
         } finally { ocupado = false; setStatus(false); }
+        return;
+      }
+
+      // ── Rota: ver_pedido / editar_pedido ──
+      if (pendenteSug.acao === "ver_pedido" || pendenteSug.acao === "editar_pedido") {
+        const aEditar = pendenteSug.acao === "editar_pedido";
+        pendenteSug = null;
+        ocupado = false; setStatus(false);
+        await abrirPedidoCliente(escolha, aEditar);
         return;
       }
 
@@ -978,9 +1050,37 @@ async function processarTexto(texto) {
       historico.push({ role:"assistant", content:resp });
       ocupado = false; setStatus(false);
 
-    } else {
+    } else if (intencao.acao === "ver_pedido" || intencao.acao === "editar_pedido") {
+      const clientes = await carregarClientes();
+      const nomeQuery = intencao.cliente || "";
+      const resultado = nomeQuery ? encontrarCliente(clientes, nomeQuery) : null;
       document.getElementById("typing").style.display = "none";
-      const resp = intencao.resposta || "Como posso ajudar?";
+
+      if (!resultado) {
+        const resp = nomeQuery
+          ? "Nao encontrei nenhum cliente com o nome \"" + nomeQuery + "\"."
+          : "Pode me dizer o nome do cliente?";
+        addMsg("bot", resp);
+        historico.push({ role:"assistant", content:resp });
+        ocupado = false; setStatus(false);
+        return;
+      }
+
+      if (!resultado.exato) {
+        const lista = resultado.sugestoes.map((s,i) => (i+1) + ". " + s.name).join("\n");
+        const resp = "Nao achei \"" + nomeQuery + "\" exato. Voce quis dizer?\n\n" + lista + "\n\nResponda com o nome ou numero.";
+        addMsg("bot", resp);
+        historico.push({ role:"assistant", content:resp });
+        pendenteSug = { acao: intencao.acao, sugestoes: resultado.sugestoes };
+        ocupado = false; setStatus(false);
+        return;
+      }
+
+      const cliPed = resultado.cliente;
+      await abrirPedidoCliente(cliPed, intencao.acao === "editar_pedido");
+      ocupado = false; setStatus(false);
+
+    } else {
       addMsg("bot", resp);
       historico.push({ role:"assistant", content:resp });
       ocupado = false; setStatus(false);
