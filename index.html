@@ -94,6 +94,14 @@
   #pedido-items::-webkit-scrollbar { width:3px; }
   #pedido-items::-webkit-scrollbar-thumb { background:#2A3942; border-radius:3px; }
   .pedido-item { display:flex; align-items:center; justify-content:space-between; background:#1E2D36; border-radius:12px; padding:10px 14px; margin-bottom:8px; gap:10px; }
+  .pedido-sec-label { color:#8696A0; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; padding:2px 2px 8px; }
+  .pedido-add-section { background:#131F26; border-radius:12px; padding:10px 12px 8px; margin-bottom:4px; }
+  .pedido-add-grid { display:flex; flex-direction:column; gap:6px; }
+  .pedido-add-chip { display:flex; align-items:center; gap:8px; padding:7px 10px; background:#1E2D36; border-radius:10px; }
+  .pedido-add-nome { color:#C8D4DA; font-size:13px; flex:1; }
+  .pedido-add-preco { color:#8696A0; font-size:12px; flex-shrink:0; }
+  .pedido-add-btn { width:30px; height:30px; border-radius:50%; border:none; background:#00A884; color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; user-select:none; -webkit-user-select:none; line-height:1; }
+  .pedido-add-btn:active { background:#007a62; }
   .pedido-item-nome { color:#E9EDEF; font-size:14px; flex:1; }
   .pedido-item-preco { color:#8696A0; font-size:12px; }
   .pedido-qty { display:flex; align-items:center; gap:8px; flex-shrink:0; }
@@ -109,6 +117,22 @@
   #btn-pedido-salvar:active  { background:#1da855; }
   #btn-pedido-editar { background:#1D3A4F; color:#53BDEB; }
   #btn-pedido-editar:active { background:#163040; }
+
+  /* ── PEDIDO INLINE NO CHAT ── */
+  .chat-pedido { background:#1A2E38; border:1px solid #2A3942; border-radius:12px; padding:12px 14px; margin-top:2px; min-width:210px; }
+  .chat-pedido-titulo { color:#E9EDEF; font-weight:700; font-size:14px; margin-bottom:2px; }
+  .chat-pedido-sub { color:#8696A0; font-size:11px; margin-bottom:8px; }
+  .chat-pedido-bloco { margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid #2A3942; }
+  .chat-pedido-bloco:last-of-type { border-bottom:none; margin-bottom:0; padding-bottom:0; }
+  .chat-pedido-bloco-num { color:#53BDEB; font-size:12px; font-weight:700; margin-bottom:4px; }
+  .chat-pedido-item { color:#E9EDEF; font-size:13px; line-height:1.8; }
+  .chat-pedido-total { color:#25D366; font-weight:700; font-size:13px; margin-top:4px; }
+  .chat-pedido-btns { display:flex; gap:8px; margin-top:10px; }
+  .chat-pedido-btn { flex:1; padding:9px 6px; border:none; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; user-select:none; -webkit-user-select:none; }
+  .btn-cp-editar { background:#1D3A4F; color:#53BDEB; }
+  .btn-cp-editar:active { background:#163040; }
+  .btn-cp-excluir { background:#2D1515; color:#f87171; }
+  .btn-cp-excluir:active { background:#3D1515; }
   #btn-pedido-cancelar { background:#3D4A50; color:#E9EDEF; }
   #btn-pedido-cancelar:active { background:#2A3942; }
   #btn-pedido-wpp { width:100%; padding:11px; border:none; border-radius:12px; background:#005C4B; color:#E9EDEF; font-weight:700; font-size:14px; cursor:pointer; margin-top:8px; display:none; }
@@ -248,6 +272,11 @@ async function sbUpdate(table, match, data) {
 }
 async function sbInsert(table, data) {
   return (await fetch(SUPABASE_URL + "/rest/v1/" + table, { method:"POST", headers:{...SB_H, Prefer:"return=representation"}, body:JSON.stringify(data) })).json();
+}
+async function sbDelete(table, match) {
+  let url = SUPABASE_URL + "/rest/v1/" + table + "?";
+  for (const [k,v] of Object.entries(match)) url += k + "=eq." + encodeURIComponent(v) + "&";
+  return fetch(url, { method:"DELETE", headers:{...SB_H, Prefer:"return=representation"} });
 }
 
 function dataHoraSP() {
@@ -465,6 +494,47 @@ function enviarComprovanteWpp(phone, nome, valor, novoSaldo, novTk, novDi) {
 async function confirmarPendente() {
   if (!pendente) return;
   document.querySelectorAll(".confirm-btns").forEach(el => el.remove());
+
+  // ── EXCLUIR PEDIDO ──
+  if (pendente.tipo === "excluir_pedido") {
+    const { pedido, cliente } = pendente;
+    pendente = null;
+    setStatus(true);
+    document.getElementById("typing").style.display = "flex";
+    rolar();
+    try {
+      const total = Number(pedido.total || 0);
+      // Busca dados atuais do cliente
+      const dados = await sbGet("clientes", { phone: cliente.phone });
+      const c = Array.isArray(dados) ? dados[0] : null;
+      if (!c) throw new Error("Cliente não encontrado.");
+      const novoDebt = Number(c.debt || 0) - total;
+      await sbUpdate("clientes", { phone: cliente.phone }, { debt: novoDebt });
+      await sbDelete("pedidos", { id: pedido.id });
+      clientesCache = null;
+      document.getElementById("typing").style.display = "none";
+      const saldoTexto = novoDebt > 0
+        ? "Débito restante: R$ " + novoDebt.toFixed(2).replace(".",",")
+        : novoDebt < 0
+          ? "Crédito gerado: R$ " + Math.abs(novoDebt).toFixed(2).replace(".",",")
+          : "Conta zerada";
+      const msg = "🗑️ Pedido de " + cliente.name + " excluído.\n\nR$ " + total.toFixed(2).replace(".",",") + " creditado na conta.\n" + saldoTexto;
+      addMsg("bot", msg);
+      historico.push({ role:"assistant", content: msg });
+      // Remove pedido da lista inline
+      if (pedidosInline) {
+        pedidosInline.rows = pedidosInline.rows.filter(r => r.id !== pedido.id);
+      }
+    } catch(e) {
+      document.getElementById("typing").style.display = "none";
+      addMsg("bot", "Erro ao excluir: " + e.message);
+    } finally {
+      setStatus(false);
+      ocupado = false;
+    }
+    return;
+  }
+
   const { cliente, valor, zerarCredito } = pendente;
   pendente = null;
   setStatus(true);
@@ -753,6 +823,35 @@ async function processarTexto(texto) {
   }
 
   if (pendenteSug) {
+    // ── ESCOLHA DE PEDIDO (editar / excluir) ──
+    if (pendenteSug.acao === "escolher_editar" || pendenteSug.acao === "escolher_excluir") {
+      const num = parseInt(texto.trim());
+      const { pedidos, cliente, cardapioArr, acao } = pendenteSug;
+      if (isNaN(num) || num < 1 || num > pedidos.length) {
+        const resp = "Digite um número de 1 a " + pedidos.length + ".";
+        addMsg("bot", resp); historico.push({ role:"assistant", content:resp });
+        ocupado = false; setStatus(false);
+        return;
+      }
+      const pedidoEscolhido = pedidos[num - 1];
+      pendenteSug = null;
+      document.getElementById("typing").style.display = "none";
+      if (acao === "escolher_editar") {
+        const itens = parsePedidoTexto(pedidoEscolhido.items, cardapioArr);
+        pedidoAtual = { cliente, pedido: pedidoEscolhido, itens: JSON.parse(JSON.stringify(itens)), cardapio: cardapioArr, editavel: true };
+        renderModalPedido();
+        document.getElementById("pedido-overlay").classList.add("open");
+      } else {
+        const total = Number(pedidoEscolhido.total || 0);
+        const msg = "Excluir Pedido " + num + " de " + cliente.name + "?\n\nTotal: R$ " + total.toFixed(2).replace(".",",") + " será creditado na conta.\n\nEssa ação não pode ser desfeita.";
+        pendente = { tipo: "excluir_pedido", pedido: pedidoEscolhido, cliente };
+        addMsg("bot", msg, true);
+        historico.push({ role:"assistant", content: msg });
+        ocupado = true;
+      }
+      return;
+    }
+
     let escolha = resolverSugestao(texto, pendenteSug.sugestoes);
 
     // Se não escolheu número → trata como novo nome e busca no banco
@@ -816,10 +915,9 @@ async function processarTexto(texto) {
 
       // ── Rota: ver_pedido / editar_pedido ──
       if (pendenteSug.acao === "ver_pedido" || pendenteSug.acao === "editar_pedido") {
-        const aEditar = pendenteSug.acao === "editar_pedido";
         pendenteSug = null;
         ocupado = false; setStatus(false);
-        await abrirPedidoCliente(escolha, aEditar);
+        await mostrarPedidosChat(escolha);
         return;
       }
 
@@ -827,7 +925,7 @@ async function processarTexto(texto) {
       if (pendenteSug.acao === "listar_pedidos") {
         pendenteSug = null;
         ocupado = false; setStatus(false);
-        await listarTodosPedidos(escolha);
+        await mostrarPedidosChat(escolha);
         return;
       }
 
@@ -1093,7 +1191,7 @@ async function processarTexto(texto) {
       }
 
       const cliPed = resultado.cliente;
-      await abrirPedidoCliente(cliPed, intencao.acao === "editar_pedido");
+      await mostrarPedidosChat(cliPed);
       ocupado = false; setStatus(false);
 
     } else if (intencao.acao === "listar_pedidos") {
@@ -1122,7 +1220,7 @@ async function processarTexto(texto) {
         return;
       }
 
-      await listarTodosPedidos(resultado.cliente);
+      await mostrarPedidosChat(resultado.cliente);
       ocupado = false; setStatus(false);
 
     } else {
@@ -1312,6 +1410,7 @@ setTimeout(() => {
 
 // ── PEDIDOS ──────────────────────────────────────────────────────
 let pedidoAtual = null;   // { cliente, pedido (db row), itens[], cardapio[], editavel }
+let pedidosInline = null; // { cliente, rows[], cardapioArr } — card exibido no chat
 
 
 async function listarTodosPedidos(cliente) {
@@ -1442,33 +1541,108 @@ function renderModalPedido() {
   const container = document.getElementById("pedido-items");
   container.innerHTML = "";
 
+  // Em modo edição: mescla cardápio completo nos itens (qty=0 para os que não estão)
+  if (editavel && cardapio && cardapio.length > 0) {
+    for (const prod of cardapio) {
+      const jaExiste = itens.find(i => (i.name || i.nome || "").trim() === (prod.name || "").trim());
+      if (!jaExiste) {
+        itens.push({ name: prod.name, price: Number(prod.price || 0), quantity: 0, categoria: prod.categoria || "", tipo: prod.tipo || "" });
+      }
+    }
+  }
+
   if (!itens || itens.length === 0) {
     container.innerHTML = '<p style="color:#8696A0;text-align:center;padding:20px;">Pedido sem itens.</p>';
     atualizarTotalPedido();
     return;
   }
 
-  itens.forEach((item, idx) => {
-    const nome  = item.name || item.nome || "Item";
-    const preco = Number(item.price || item.preco || 0);
-    const qty   = Number(item.quantity || item.qty || item.quantidade || 1);
+  if (!editavel) {
+    // Modo leitura: mostra só os itens do pedido
+    itens.forEach((item, idx) => {
+      const nome  = item.name || item.nome || "Item";
+      const preco = Number(item.price || item.preco || 0);
+      const qty   = Number(item.quantity || item.qty || item.quantidade || 1);
+      const div = document.createElement("div");
+      div.className = "pedido-item";
+      div.innerHTML =
+        '<div><div class="pedido-item-nome">' + nome + '</div>' +
+        '<div class="pedido-item-preco">R$ ' + preco.toFixed(2).replace(".",",") + ' cada</div></div>' +
+        '<div class="pedido-qty"><span id="qty-' + idx + '">' + qty + '</span></div>';
+      container.appendChild(div);
+    });
+    atualizarTotalPedido();
+    return;
+  }
 
-    const div = document.createElement("div");
-    div.className = "pedido-item";
-    div.innerHTML =
-      '<div>' +
-        '<div class="pedido-item-nome">' + nome + '</div>' +
-        '<div class="pedido-item-preco">R$ ' + preco.toFixed(2).replace(".",",") + ' cada</div>' +
-      '</div>' +
-      '<div class="pedido-qty">' +
-        (editavel ? '<button onclick="alterarQty(' + idx + ',-1)">−</button>' : '') +
-        '<span id="qty-' + idx + '">' + qty + '</span>' +
-        (editavel ? '<button onclick="alterarQty(' + idx + ',1)">+</button>' : '') +
-      '</div>';
-    container.appendChild(div);
-  });
+  // ── MODO EDIÇÃO ──
+  const noOrder     = itens.filter(i => Number(i.quantity || i.qty || i.quantidade || 0) > 0);
+  const disponiveis = itens.filter(i => Number(i.quantity || i.qty || i.quantidade || 0) === 0);
+
+  // Seção ADICIONAR (chips compactos no topo)
+  if (disponiveis.length > 0) {
+    const secAdd = document.createElement("div");
+    secAdd.className = "pedido-add-section";
+    secAdd.innerHTML = '<div class="pedido-sec-label">➕ Adicionar</div>';
+    const grid = document.createElement("div");
+    grid.className = "pedido-add-grid";
+    disponiveis.forEach(item => {
+      const idx = itens.indexOf(item);
+      const nome = item.name || item.nome || "Item";
+      const preco = Number(item.price || item.preco || 0);
+      const chip = document.createElement("div");
+      chip.className = "pedido-add-chip";
+      chip.innerHTML =
+        '<div class="pedido-add-nome">' + nome + '</div>' +
+        '<div class="pedido-add-preco">R$ ' + preco.toFixed(2).replace(".",",") + '</div>' +
+        '<button class="pedido-add-btn" onclick="adicionarItem(' + idx + ')">＋</button>';
+      grid.appendChild(chip);
+    });
+    secAdd.appendChild(grid);
+    container.appendChild(secAdd);
+  }
+
+  // Separador
+  if (noOrder.length > 0) {
+    const sep = document.createElement("div");
+    sep.className = "pedido-sec-label";
+    sep.style.marginTop = disponiveis.length > 0 ? "14px" : "0";
+    sep.textContent = "🛒 No pedido";
+    container.appendChild(sep);
+
+    noOrder.forEach(item => {
+      const idx = itens.indexOf(item);
+      const nome  = item.name || item.nome || "Item";
+      const preco = Number(item.price || item.preco || 0);
+      const qty   = Number(item.quantity || item.qty || item.quantidade || 0);
+      const div = document.createElement("div");
+      div.className = "pedido-item";
+      div.innerHTML =
+        '<div><div class="pedido-item-nome">' + nome + '</div>' +
+        '<div class="pedido-item-preco">R$ ' + preco.toFixed(2).replace(".",",") + ' cada</div></div>' +
+        '<div class="pedido-qty">' +
+          '<button onclick="alterarQty(' + idx + ',-1)">−</button>' +
+          '<span id="qty-' + idx + '">' + qty + '</span>' +
+          '<button onclick="alterarQty(' + idx + ',1)">+</button>' +
+        '</div>';
+      container.appendChild(div);
+    });
+  } else {
+    const vazio = document.createElement("p");
+    vazio.style.cssText = "color:#8696A0;text-align:center;padding:14px 0 4px;font-size:13px;";
+    vazio.textContent = "Nenhum item no pedido ainda.";
+    container.appendChild(vazio);
+  }
 
   atualizarTotalPedido();
+}
+
+function adicionarItem(idx) {
+  if (!pedidoAtual) return;
+  const item = pedidoAtual.itens[idx];
+  const chaveQty = item.quantity !== undefined ? "quantity" : item.qty !== undefined ? "qty" : "quantidade";
+  item[chaveQty] = 1;
+  renderModalPedido(); // re-renderiza para mover o chip para "No pedido"
 }
 
 function alterarQty(idx, delta) {
@@ -1478,7 +1652,11 @@ function alterarQty(idx, delta) {
   const atual = Number(item[chaveQty] || item.quantity || item.qty || item.quantidade || 1);
   const novo = Math.max(0, atual + delta);
   item[chaveQty] = novo;
-  // Atualiza só o número na tela
+  // Se chegou a 0, re-renderiza para mover o item de volta pra seção "Adicionar"
+  if (novo === 0) {
+    renderModalPedido();
+    return;
+  }
   const el = document.getElementById("qty-" + idx);
   if (el) el.textContent = novo;
   atualizarTotalPedido();
@@ -1581,6 +1759,112 @@ function ativarEdicaoPedido() {
   if (!pedidoAtual) return;
   pedidoAtual.editavel = true;
   renderModalPedido();
+}
+
+// ── PEDIDO INLINE NO CHAT ──────────────────────────────────────
+
+function addPedidoCard(cliente, rows, cardapioArr) {
+  pedidosInline = { cliente, rows, cardapioArr };
+  const t = agora();
+  const temVarios = rows.length > 1;
+  const row = document.createElement("div");
+  row.className = "msg-row bot";
+
+  let conteudo = `<div class="chat-pedido-titulo">📋 Pedido de ${cliente.name}</div>
+    <div class="chat-pedido-sub">${temVarios ? rows.length + " pedidos encontrados" : "Pedido mais recente"}</div>`;
+
+  if (temVarios) {
+    rows.forEach((pedido, idx) => {
+      const itens = parsePedidoTexto(pedido.items, cardapioArr);
+      const total = Number(pedido.total || 0);
+      conteudo += `<div class="chat-pedido-bloco">
+        <div class="chat-pedido-bloco-num">Pedido ${idx+1}</div>
+        ${itens.map(i => `<div class="chat-pedido-item">${Number(i.quantity||i.qty||i.quantidade||1)}x : ${i.name||i.nome||"Item"}</div>`).join("")}
+        <div class="chat-pedido-total">Total: R$ ${total.toFixed(2).replace(".",",")}</div>
+      </div>`;
+    });
+  } else {
+    const itens = parsePedidoTexto(rows[0].items, cardapioArr);
+    const total = Number(rows[0].total || 0);
+    conteudo += itens.map(i =>
+      `<div class="chat-pedido-item">${Number(i.quantity||i.qty||i.quantidade||1)}x : ${i.name||i.nome||"Item"}</div>`
+    ).join("") + `<div class="chat-pedido-total">Total: R$ ${total.toFixed(2).replace(".",",")}</div>`;
+  }
+
+  conteudo += `<div class="chat-pedido-btns">
+    <button class="chat-pedido-btn btn-cp-editar" onclick="editarPedidoInline()">✏️ Editar</button>
+    <button class="chat-pedido-btn btn-cp-excluir" onclick="excluirPedidoInline()">🗑️ Excluir</button>
+  </div>`;
+
+  row.innerHTML = `<div class="bubble bot">
+    <span class="bubble-meta-wrap"><span class="bubble-time">${t}</span></span>
+    <div class="chat-pedido">${conteudo}</div>
+  </div>`;
+  msgs().insertBefore(row, document.getElementById("typing"));
+  rolar();
+}
+
+async function mostrarPedidosChat(cliente) {
+  try {
+    const cardapio = await (await fetch(SUPABASE_URL + "/rest/v1/cardapio?select=*&available=eq.true", { headers: SB_H })).json();
+    const cardapioArr = Array.isArray(cardapio) ? cardapio : [];
+    const url = SUPABASE_URL + "/rest/v1/pedidos?select=*&customer_phone=eq." +
+      encodeURIComponent(cliente.phone) + "&order=created_at.desc";
+    const rows = await (await fetch(url, { headers: SB_H })).json();
+    document.getElementById("typing").style.display = "none";
+    if (!Array.isArray(rows) || rows.length === 0) {
+      const msg = "Nenhum pedido encontrado para " + cliente.name + ".";
+      addMsg("bot", msg); historico.push({ role:"assistant", content: msg });
+      return;
+    }
+    // filtra só pedidos com itens
+    const validos = rows.filter(r => parsePedidoTexto(r.items, cardapioArr).length > 0);
+    if (!validos.length) {
+      const msg = "Pedidos de " + cliente.name + " não têm itens registrados.";
+      addMsg("bot", msg); historico.push({ role:"assistant", content: msg });
+      return;
+    }
+    addPedidoCard(cliente, validos, cardapioArr);
+  } catch(e) {
+    document.getElementById("typing").style.display = "none";
+    addMsg("bot", "Erro ao buscar pedidos: " + e.message);
+  }
+}
+
+function editarPedidoInline() {
+  if (!pedidosInline) return;
+  const { rows, cardapioArr, cliente } = pedidosInline;
+  if (rows.length === 1) {
+    const itens = parsePedidoTexto(rows[0].items, cardapioArr);
+    pedidoAtual = { cliente, pedido: rows[0], itens: JSON.parse(JSON.stringify(itens)), cardapio: cardapioArr, editavel: true };
+    renderModalPedido();
+    document.getElementById("pedido-overlay").classList.add("open");
+  } else {
+    const lista = rows.map((r, i) => (i+1) + ". Pedido " + (i+1) + " — R$ " + Number(r.total||0).toFixed(2).replace(".",",")).join("\n");
+    const resp = "Qual pedido deseja editar?\n\n" + lista;
+    addMsg("bot", resp);
+    historico.push({ role:"assistant", content: resp });
+    pendenteSug = { acao: "escolher_editar", pedidos: rows, cliente, cardapioArr };
+  }
+}
+
+function excluirPedidoInline() {
+  if (!pedidosInline) return;
+  const { rows, cliente } = pedidosInline;
+  if (rows.length === 1) {
+    const total = Number(rows[0].total || 0);
+    const msg = "Excluir pedido de " + cliente.name + "?\n\nTotal: R$ " + total.toFixed(2).replace(".",",") + " será creditado na conta.\n\nEssa ação não pode ser desfeita.";
+    pendente = { tipo: "excluir_pedido", pedido: rows[0], cliente };
+    addMsg("bot", msg, true);
+    historico.push({ role:"assistant", content: msg });
+    ocupado = true;
+  } else {
+    const lista = rows.map((r, i) => (i+1) + ". Pedido " + (i+1) + " — R$ " + Number(r.total||0).toFixed(2).replace(".",",")).join("\n");
+    const resp = "Qual pedido deseja excluir?\n\n" + lista;
+    addMsg("bot", resp);
+    historico.push({ role:"assistant", content: resp });
+    pendenteSug = { acao: "escolher_excluir", pedidos: rows, cliente, cardapioArr: pedidosInline.cardapioArr };
+  }
 }
 
 function fecharPedido() {
