@@ -190,6 +190,7 @@
       <div id="pedido-items"></div>
       <div id="pedido-footer">
         <div id="pedido-total-line">Total: <strong id="pedido-total-valor">R$ 0,00</strong></div>
+        <div id="pedido-desconto-line" style="display:none;color:#f87171;font-size:12px;text-align:center;margin-top:-6px;margin-bottom:6px;"></div>
         <div class="pedido-btns">
           <button class="pedido-btns" id="btn-pedido-cancelar" onclick="fecharPedido()">✕ Fechar</button>
           <button class="pedido-btns" id="btn-pedido-editar" onclick="ativarEdicaoPedido()">✏️ Mudar Pedido</button>
@@ -1527,6 +1528,19 @@ async function listarTodosPedidos(cliente) {
   }
 }
 
+// Extrai linhas de cupom/crédito do texto do pedido e seus valores de desconto
+function extrairLinhasExtras(texto) {
+  const extras = [];
+  for (const linha of (texto || "").split("\n")) {
+    if (linha.startsWith("🏷️") || linha.startsWith("💳")) {
+      const m = linha.match(/-\s*R?\$?\s*(\d+(?:[.,]\d{1,2})?)/);
+      const desconto = m ? parseFloat(m[1].replace(",", ".")) : 0;
+      extras.push({ linha: linha.trim(), desconto });
+    }
+  }
+  return extras;
+}
+
 // Converte o texto do cliente.html para array [{name, price, quantity, categoria}]
 function parsePedidoTexto(texto, cardapio) {
   const itens = [];
@@ -1740,13 +1754,29 @@ function alterarQty(idx, delta) {
 
 function atualizarTotalPedido() {
   if (!pedidoAtual) return;
-  const total = pedidoAtual.itens.reduce((acc, item) => {
+  const totalBruto = pedidoAtual.itens.reduce((acc, item) => {
     const qty   = Number(item.quantity || item.qty || item.quantidade || 0);
     const preco = Number(item.price || item.preco || 0);
     return acc + qty * preco;
   }, 0);
+  const extras = extrairLinhasExtras(pedidoAtual.pedido.items);
+  const totalDescontos = extras.reduce((acc, e) => acc + e.desconto, 0);
+  const total = Math.max(0, totalBruto - totalDescontos);
   document.getElementById("pedido-total-valor").textContent = "R$ " + total.toFixed(2).replace(".",",");
+  // Mostra linha de desconto se houver cupom/crédito
+  const descontoEl = document.getElementById("pedido-desconto-line");
+  if (descontoEl) {
+    if (totalDescontos > 0) {
+      const labels = extras.map(e => e.linha.split(":")[0]).join(", ");
+      descontoEl.textContent = labels + ": −R$ " + totalDescontos.toFixed(2).replace(".",",");
+      descontoEl.style.display = "block";
+    } else {
+      descontoEl.style.display = "none";
+    }
+  }
   pedidoAtual._novoTotal = total;
+  pedidoAtual._totalDescontos = totalDescontos;
+  pedidoAtual._extras = extras;
 }
 
 async function salvarPedido() {
@@ -1763,22 +1793,59 @@ async function salvarPedido() {
   document.getElementById("btn-pedido-salvar").disabled = true;
 
   try {
-    const novoTexto = itensToPedidoTexto(itensFiltrados);
+    const extras = extrairLinhasExtras(pedido.items);
+    const totalDescontos = extras.reduce((acc, e) => acc + e.desconto, 0);
+    const novoTotalComDesconto = Math.max(0, novoTotal - totalDescontos);
+
+    // ── Calcula diferença e ajusta debt do cliente ──
+    const totalAntigo = Number(pedido.total || 0);
+    const diferenca = totalAntigo - novoTotalComDesconto; // positivo = devolver crédito, negativo = cobrar mais
+
+    // Preserva linhas de cupom/crédito no texto salvo
+    const extrasTexto = extras.length > 0 ? extras.map(e => e.linha).join("\n") + "\n" : "";
+    const novoTexto = itensToPedidoTexto(itensFiltrados) + extrasTexto;
+
     await sbUpdate("pedidos", { id: pedido.id }, {
       items: novoTexto,
-      total: novoTotal
+      total: novoTotalComDesconto
     });
 
+    let novoDebt = null;
+    if (Math.abs(diferenca) >= 0.01) {
+      // Busca debt atual direto do banco (evita valor stale do cache)
+      const cliAtual = await sbGet("clientes", { phone: cliente.phone });
+      const debtFresh = Number((Array.isArray(cliAtual) ? cliAtual[0] : cliAtual)?.debt || 0);
+      novoDebt = debtFresh - diferenca;
+      await sbUpdate("clientes", { phone: cliente.phone }, { debt: novoDebt });
+      clientesCache = null;
+      cliente.debt = novoDebt;
+    }
+
     pedidoAtual.pedido.items = novoTexto;
-    pedidoAtual.pedido.total = novoTotal;
-    pedidoAtual._novoTotal = novoTotal;
+    pedidoAtual.pedido.total = novoTotalComDesconto;
+    pedidoAtual._novoTotal = novoTotalComDesconto;
 
     document.getElementById("btn-pedido-salvar").textContent = "✅ Salvo!";
     document.getElementById("btn-pedido-salvar").style.background = "#1da855";
     document.getElementById("btn-pedido-wpp").style.display = "block";
 
     const resumo = formatarResumoItens(itensFiltrados);
-    const msgBot = "✅ Pedido de " + cliente.name + " atualizado!\n\n" + resumo + "\nTotal: R$ " + novoTotal.toFixed(2).replace(".",",");
+    let linhaAjuste = "";
+    if (novoDebt !== null) {
+      if (diferenca >= 0.01) {
+        linhaAjuste = "\n💚 −R$ " + diferenca.toFixed(2).replace(".",",") + " na conta";
+      } else if (diferenca <= -0.01) {
+        linhaAjuste = "\n⚠️ +R$ " + Math.abs(diferenca).toFixed(2).replace(".",",") + " na conta";
+      }
+      const saldoFinal = novoDebt > 0
+        ? "\nDébito atual: R$ " + novoDebt.toFixed(2).replace(".",",")
+        : novoDebt < 0
+          ? "\nCrédito a favor: R$ " + Math.abs(novoDebt).toFixed(2).replace(".",",")
+          : "\nConta quitada ✅";
+      linhaAjuste += saldoFinal;
+    }
+
+    const msgBot = "✅ Pedido de " + cliente.name + " atualizado!\n\n" + resumo + "\nTotal: R$ " + novoTotalComDesconto.toFixed(2).replace(".",",") + linhaAjuste;
     addMsg("bot", msgBot);
     historico.push({ role:"assistant", content: msgBot });
 
@@ -1810,21 +1877,20 @@ function enviarComprovanteAlteracaoWpp() {
   const { cliente, pedido } = pedidoAtual;
   let itens = parsePedidoTexto(pedido.items, pedidoAtual.cardapio || []);
   const novoTotal = pedidoAtual._novoTotal || Number(pedido.total || 0);
-  const dh = dataHoraSP();
-  const resumo = formatarResumoItens(itens);
+
+  const linhasItens = itens
+    .filter(i => Number(i.quantity || i.qty || i.quantidade || 0) > 0)
+    .map(i => "✅ " + Number(i.quantity || i.qty || i.quantidade || 0) + " : " + (i.name || i.nome || "Item") + "*")
+    .join("\n");
 
   const msg =
     "👽 *𝕕𝕚𝕟𝕠 𝕚.𝕒* ᵃᵈᵐⁱⁿⁱˢᵗʳᵃᵈᵒʳ\n" +
-    "seu pedido foi alterado.\n" +
-    "*O Rei da Coxinha* 🍗\n" +
-    "──────────────────\n" +
-    "👤 Cliente: " + cliente.name + "\n" +
-    "📅 Data/Hora: " + dh + "\n" +
-    "📋 Novo pedido:\n" +
-    resumo +
-    "💰 Total: R$ " + novoTotal.toFixed(2).replace(".",",") + "\n" +
-    "──────────────────\n" +
-    "✅ Pedido atualizado!";
+    "*seu pedido foi alterado*\n" +
+    "➖➖➖➖➖➖➖➖➖➖\n" +
+    linhasItens + "\n" +
+    "total : R$ " + novoTotal.toFixed(2).replace(".",",") + "\n" +
+    "➖➖➖➖➖➖➖➖➖➖\n" +
+    "✅ pedido atualizado";
 
   const tel = String(cliente.phone).replace(/\D/g, "");
   const link = "https://wa.me/" + (tel.startsWith("55") ? tel : "55" + tel) + "?text=" + encodeURIComponent(msg);
