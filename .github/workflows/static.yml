@@ -18,8 +18,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Inject Gemini Keys
+        env:
+          GEMINI_KEYS: ${{ secrets.GEMINI_KEYS }}
         run: |
-          sed -i 's|__GEMINI_KEYS__|${{ secrets.GEMINI_KEYS }}|g' index.html
+          sed -i "s|__GEMINI_KEYS__|${GEMINI_KEYS}|g" index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
