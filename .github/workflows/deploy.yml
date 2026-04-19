@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main  # Ou 'master', dependendo do nome da sua branch principal
+      - main
 
 permissions:
   contents: read
@@ -17,6 +17,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Inject Gemini Keys
+        run: |
+          sed -i 's|__GEMINI_KEYS__|${{ secrets.GEMINI_KEYS }}|g' index.html
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
@@ -28,4 +32,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        
