@@ -1264,6 +1264,196 @@ setTimeout(() => {
   }
   setTimeout(() => document.getElementById("msg-input").focus(), 100);
 }, 400);
+
+// ── PEDIDOS ──────────────────────────────────────────────────────
+let pedidoAtual = null;   // { cliente, pedido (db row), itens[], cardapio[], editavel }
+
+async function abrirPedidoCliente(cliente, editavel) {
+  try {
+    // Busca último pedido não entregue do cliente, ou o mais recente
+    const url = SUPABASE_URL + "/rest/v1/pedidos?select=*&customer_phone=eq." +
+      encodeURIComponent(cliente.phone) + "&order=created_at.desc&limit=1";
+    const rows = await (await fetch(url, { headers: SB_H })).json();
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      addMsg("bot", "Nenhum pedido encontrado para " + cliente.name + ".");
+      historico.push({ role:"assistant", content:"Nenhum pedido encontrado para " + cliente.name + "." });
+      return;
+    }
+
+    const pedido = rows[0];
+    let itens = [];
+    try { itens = JSON.parse(pedido.items || "[]"); } catch(e) { itens = []; }
+
+    // Busca cardápio para ter preços e nomes completos
+    const cardapio = await (await fetch(SUPABASE_URL + "/rest/v1/cardapio?select=*&available=eq.true", { headers: SB_H })).json();
+
+    pedidoAtual = { cliente, pedido, itens: JSON.parse(JSON.stringify(itens)), cardapio: Array.isArray(cardapio) ? cardapio : [], editavel };
+    renderModalPedido();
+    document.getElementById("pedido-overlay").classList.add("open");
+
+  } catch(e) {
+    addMsg("bot", "Erro ao buscar pedido: " + e.message);
+  }
+}
+
+function renderModalPedido() {
+  if (!pedidoAtual) return;
+  const { cliente, pedido, itens, cardapio, editavel } = pedidoAtual;
+
+  document.getElementById("pedido-nome-cliente").textContent = cliente.name;
+  document.getElementById("pedido-subtitulo").textContent = editavel
+    ? "Ajuste as quantidades e salve"
+    : "Pedido mais recente (somente leitura)";
+  document.getElementById("btn-pedido-salvar").style.display = editavel ? "" : "none";
+  document.getElementById("btn-pedido-wpp").style.display = "none";
+
+  const container = document.getElementById("pedido-items");
+  container.innerHTML = "";
+
+  if (!itens || itens.length === 0) {
+    container.innerHTML = '<p style="color:#8696A0;text-align:center;padding:20px;">Pedido sem itens.</p>';
+    atualizarTotalPedido();
+    return;
+  }
+
+  itens.forEach((item, idx) => {
+    const nome  = item.name || item.nome || "Item";
+    const preco = Number(item.price || item.preco || 0);
+    const qty   = Number(item.quantity || item.qty || item.quantidade || 1);
+
+    const div = document.createElement("div");
+    div.className = "pedido-item";
+    div.innerHTML =
+      '<div>' +
+        '<div class="pedido-item-nome">' + nome + '</div>' +
+        '<div class="pedido-item-preco">R$ ' + preco.toFixed(2).replace(".",",") + ' cada</div>' +
+      '</div>' +
+      '<div class="pedido-qty">' +
+        (editavel ? '<button onclick="alterarQty(' + idx + ',-1)">−</button>' : '') +
+        '<span id="qty-' + idx + '">' + qty + '</span>' +
+        (editavel ? '<button onclick="alterarQty(' + idx + ',1)">+</button>' : '') +
+      '</div>';
+    container.appendChild(div);
+  });
+
+  atualizarTotalPedido();
+}
+
+function alterarQty(idx, delta) {
+  if (!pedidoAtual) return;
+  const item = pedidoAtual.itens[idx];
+  const chaveQty = item.quantity !== undefined ? "quantity" : item.qty !== undefined ? "qty" : "quantidade";
+  const atual = Number(item[chaveQty] || item.quantity || item.qty || item.quantidade || 1);
+  const novo = Math.max(0, atual + delta);
+  item[chaveQty] = novo;
+  // Atualiza só o número na tela
+  const el = document.getElementById("qty-" + idx);
+  if (el) el.textContent = novo;
+  atualizarTotalPedido();
+}
+
+function atualizarTotalPedido() {
+  if (!pedidoAtual) return;
+  const total = pedidoAtual.itens.reduce((acc, item) => {
+    const qty   = Number(item.quantity || item.qty || item.quantidade || 0);
+    const preco = Number(item.price || item.preco || 0);
+    return acc + qty * preco;
+  }, 0);
+  document.getElementById("pedido-total-valor").textContent = "R$ " + total.toFixed(2).replace(".",",");
+  pedidoAtual._novoTotal = total;
+}
+
+async function salvarPedido() {
+  if (!pedidoAtual || !pedidoAtual.editavel) return;
+  const { cliente, pedido, itens } = pedidoAtual;
+
+  // Remove itens com qty 0
+  const itensFiltrados = itens.filter(item => Number(item.quantity || item.qty || item.quantidade || 0) > 0);
+  const novoTotal = itensFiltrados.reduce((acc, item) => {
+    return acc + Number(item.quantity || item.qty || item.quantidade || 0) * Number(item.price || item.preco || 0);
+  }, 0);
+
+  document.getElementById("btn-pedido-salvar").textContent = "Salvando...";
+  document.getElementById("btn-pedido-salvar").disabled = true;
+
+  try {
+    await sbUpdate("pedidos", { id: pedido.id }, {
+      items: JSON.stringify(itensFiltrados),
+      total: novoTotal
+    });
+
+    pedidoAtual.pedido.items = JSON.stringify(itensFiltrados);
+    pedidoAtual.pedido.total = novoTotal;
+    pedidoAtual._novoTotal = novoTotal;
+
+    document.getElementById("btn-pedido-salvar").textContent = "✅ Salvo!";
+    document.getElementById("btn-pedido-salvar").style.background = "#1da855";
+    document.getElementById("btn-pedido-wpp").style.display = "block";
+
+    const resumo = formatarResumoItens(itensFiltrados);
+    const msgBot = "✅ Pedido de " + cliente.name + " atualizado!\n\n" + resumo + "\nTotal: R$ " + novoTotal.toFixed(2).replace(".",",");
+    addMsg("bot", msgBot);
+    historico.push({ role:"assistant", content: msgBot });
+
+    setTimeout(() => {
+      if (document.getElementById("btn-pedido-salvar")) {
+        document.getElementById("btn-pedido-salvar").textContent = "✅ Salvar";
+        document.getElementById("btn-pedido-salvar").style.background = "#25D366";
+        document.getElementById("btn-pedido-salvar").disabled = false;
+      }
+    }, 2000);
+
+  } catch(e) {
+    document.getElementById("btn-pedido-salvar").textContent = "✅ Salvar";
+    document.getElementById("btn-pedido-salvar").disabled = false;
+    addMsg("bot", "Erro ao salvar pedido: " + e.message);
+  }
+}
+
+function formatarResumoItens(itens) {
+  return itens.map(item => {
+    const qty  = Number(item.quantity || item.qty || item.quantidade || 0);
+    const nome = item.name || item.nome || "Item";
+    return qty + "x " + nome;
+  }).join("\n") + "\n";
+}
+
+function enviarComprovanteAlteracaoWpp() {
+  if (!pedidoAtual) return;
+  const { cliente, pedido } = pedidoAtual;
+  let itens = [];
+  try { itens = JSON.parse(pedido.items || "[]"); } catch(e) {}
+  const novoTotal = pedidoAtual._novoTotal || Number(pedido.total || 0);
+  const dh = dataHoraSP();
+  const resumo = formatarResumoItens(itens);
+
+  const msg =
+    "👽 *DINO i.A* administrador\n" +
+    "seu pedido foi alterado.\n" +
+    "*O Rei da Coxinha* 🍗\n" +
+    "──────────────────\n" +
+    "👤 Cliente: " + cliente.name + "\n" +
+    "📅 Data/Hora: " + dh + "\n" +
+    "📋 Novo pedido:\n" +
+    resumo +
+    "💰 Total: R$ " + novoTotal.toFixed(2).replace(".",",") + "\n" +
+    "──────────────────\n" +
+    "✅ Pedido atualizado!";
+
+  const tel = String(cliente.phone).replace(/\D/g, "");
+  const link = "https://wa.me/" + (tel.startsWith("55") ? tel : "55" + tel) + "?text=" + encodeURIComponent(msg);
+  window.open(link, "_blank");
+}
+
+function fecharPedido() {
+  document.getElementById("pedido-overlay").classList.remove("open");
+  pedidoAtual = null;
+}
+
+function fecharPedidoFora(e) {
+  if (e.target === document.getElementById("pedido-overlay")) fecharPedido();
+}
 </script>
 </body>
 </html>
