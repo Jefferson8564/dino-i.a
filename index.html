@@ -2121,7 +2121,20 @@ async function processarFilaTTS() {
       break; // erro de rede, desiste
     }
   }
-  // Todas as chaves falharam ou erro — continua fila silenciosamente
+  // Gemini TTS falhou — usa Web Speech API como fallback
+  if (window.speechSynthesis) {
+    const utt = new SpeechSynthesisUtterance(texto);
+    utt.lang  = "pt-BR";
+    utt.rate  = 1.05;
+    utt.pitch = 1.0;
+    utt.onend  = () => { ttsRodando = false; processarFilaTTS(); };
+    utt.onerror = () => { ttsRodando = false; processarFilaTTS(); };
+    // Garante que o contexto de áudio está ativo antes de falar
+    try { getAudioCtx(); } catch(e) {}
+    window.speechSynthesis.cancel(); // limpa fila interna do browser
+    window.speechSynthesis.speak(utt);
+    return;
+  }
   ttsRodando = false;
   processarFilaTTS();
 }
