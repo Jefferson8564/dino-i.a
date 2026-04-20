@@ -226,6 +226,7 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 // ── GEMINI API ──
 const GEMINI_KEYS = __GEMINI_KEYS__;
 let geminiKeyIndex = (() => { try { const s = localStorage.getItem("dino_gemini_key_idx"); return s !== null ? parseInt(s) : 0; } catch(e) { return 0; } })();
+let ttsKeyIndex = 0; // índice independente para TTS — não interfere no chat
 const GEMINI_MODELS = [
   { id: "gemini-2.5-flash", nome: "2.5 Flash" },
 ];
@@ -2072,7 +2073,7 @@ async function processarFilaTTS() {
   const texto = ttsQueue.shift();
 
   for (let tentativa = 0; tentativa < GEMINI_KEYS.length; tentativa++) {
-    const chave = GEMINI_KEYS[geminiKeyIndex];
+    const chave = GEMINI_KEYS[ttsKeyIndex];
     try {
       const res = await fetch(
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",
@@ -2095,14 +2096,14 @@ async function processarFilaTTS() {
       const json = await res.json();
       const errCode = json?.error?.code || (res.ok ? 0 : res.status);
       if (errCode === 429 || errCode === 401 || errCode === 403) {
-        geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length;
+        ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length;
         continue;
       }
       // Procura a parte de áudio na resposta (pode vir em qualquer posição)
       const parts = json?.candidates?.[0]?.content?.parts || [];
       const audioPart = parts.find(p => p?.inlineData?.mimeType?.startsWith("audio"));
       const b64 = audioPart?.inlineData?.data;
-      if (!b64) { geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length; continue; }
+      if (!b64) { ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length; continue; }
 
       const bin = atob(b64);
       const ctx = getAudioCtx();
@@ -2123,7 +2124,7 @@ async function processarFilaTTS() {
       src.start();
       return;
     } catch(e) {
-      geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length;
+      ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length;
     }
   }
   // Todas as chaves falharam — segue fila silenciosamente
