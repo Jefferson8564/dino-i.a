@@ -2071,7 +2071,7 @@ async function processarFilaTTS() {
   ttsRodando = true;
   const texto = ttsQueue.shift();
 
-  // Tenta todas as chaves antes de desistir
+  // ── Tenta Gemini TTS com formato correto ──
   for (let tentativa = 0; tentativa < GEMINI_KEYS.length; tentativa++) {
     const chave = GEMINI_KEYS[geminiKeyIndex];
     try {
@@ -2082,15 +2082,23 @@ async function processarFilaTTS() {
           headers: { "Content-Type": "application/json", "x-goog-api-key": chave },
           body: JSON.stringify({
             contents: [{ role: "user", parts: [{ text: texto }] }],
+            responseModalities: ["audio"],
             generationConfig: {
-              responseModalities: ["AUDIO"],
-              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Dipper" } } }
+              speechConfig: {
+                voiceConfig: {
+                  prebuiltVoiceConfig: { voiceName: "Dipper" }
+                }
+              }
             }
           })
         }
       );
+      if (!res.ok) {
+        geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length;
+        continue;
+      }
       const json = await res.json();
-      const errCode = json?.error?.code || res.status;
+      const errCode = json?.error?.code;
       if (errCode === 429 || errCode === 401 || errCode === 403) {
         geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length;
         continue;
@@ -2098,9 +2106,10 @@ async function processarFilaTTS() {
       const b64 = json?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
       if (!b64) { geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length; continue; }
 
+      // Decodifica PCM 16-bit e toca via AudioContext
       const bin = atob(b64);
       const ctx = getAudioCtx();
-      const n = bin.length / 2;
+      const n   = bin.length / 2;
       const buf = ctx.createBuffer(1, n, 24000);
       const ch  = buf.getChannelData(0);
       for (let i = 0; i < n; i++) {
@@ -2115,43 +2124,36 @@ async function processarFilaTTS() {
       src.connect(ctx.destination);
       src.onended = () => { ttsRodando = false; processarFilaTTS(); };
       src.start();
-      return; // sucesso
+      return; // sucesso — Dipper falou!
     } catch(e) {
-      continue; // tenta próxima chave
+      geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length;
     }
   }
 
-  // Gemini TTS falhou — fallback Web Speech API com voz masculina
-  if (window.speechSynthesis) {
-    const falarComVoz = () => {
-      const utt = new SpeechSynthesisUtterance(texto);
-      utt.lang  = "pt-BR";
-      utt.rate  = 1.0;
-      utt.pitch = 0.85; // mais grave, similar ao Dipper
-      // Tenta encontrar voz masculina em português
-      const voices = window.speechSynthesis.getVoices();
-      const vogalMasc = voices.find(v =>
-        v.lang.startsWith("pt") &&
-        (v.name.toLowerCase().includes("male") ||
-         v.name.toLowerCase().includes("masc") ||
-         v.name.toLowerCase().includes("brasil") && !v.name.toLowerCase().includes("female"))
-      ) || voices.find(v => v.lang.startsWith("pt"));
-      if (vogalMasc) utt.voice = vogalMasc;
-      utt.onend  = () => { ttsRodando = false; processarFilaTTS(); };
-      utt.onerror = () => { ttsRodando = false; processarFilaTTS(); };
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utt);
-    };
-    // Vozes podem não estar carregadas ainda
-    if (window.speechSynthesis.getVoices().length > 0) {
-      falarComVoz();
-    } else {
-      window.speechSynthesis.onvoiceschanged = () => { falarComVoz(); };
-    }
-    return;
+  // ── Fallback: Web Speech API com voz grave ──
+  if (!window.speechSynthesis) { ttsRodando = false; processarFilaTTS(); return; }
+  const falar = () => {
+    const voices = window.speechSynthesis.getVoices();
+    const voz = voices.find(v => v.lang === "pt-BR" && /male|masc/i.test(v.name))
+             || voices.find(v => v.lang.startsWith("pt") && /male|masc/i.test(v.name))
+             || voices.find(v => v.lang === "pt-BR")
+             || voices.find(v => v.lang.startsWith("pt"))
+             || null;
+    const utt = new SpeechSynthesisUtterance(texto);
+    utt.lang  = "pt-BR";
+    utt.rate  = 0.95;
+    utt.pitch = 0.7;
+    if (voz) utt.voice = voz;
+    utt.onend  = () => { ttsRodando = false; processarFilaTTS(); };
+    utt.onerror = () => { ttsRodando = false; processarFilaTTS(); };
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utt);
+  };
+  if (window.speechSynthesis.getVoices().length > 0) {
+    falar();
+  } else {
+    window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.onvoiceschanged = null; falar(); };
   }
-  ttsRodando = false;
-  processarFilaTTS();
 }
 
 function falarTexto(texto) {
