@@ -1353,18 +1353,65 @@ function atualizarBotoesBarra() {
 
 
 // ── CONFIGURAÇÕES: engrenagem ──
+async function previewVoz(voiceId, btn) {
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<div style="color:#53BDEB;font-size:12px;">⏳ carregando...</div>';
+  const chave = GEMINI_KEYS[ttsKeyIndex];
+  try {
+    const res = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": chave },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: "Olá! Eu sou a voz " + voiceId + ", tudo bem?" }] }],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceId } } }
+          }
+        })
+      }
+    );
+    const json = await res.json();
+    const parts = json?.candidates?.[0]?.content?.parts || [];
+    const b64 = parts.find(p => p?.inlineData?.data)?.inlineData?.data;
+    btn.innerHTML = orig;
+    if (!b64) return;
+    const bin = atob(b64);
+    const ctx = getAudioCtx();
+    const n   = bin.length / 2;
+    const buf = ctx.createBuffer(1, n, 24000);
+    const ch  = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) {
+      const lo = bin.charCodeAt(i * 2) & 0xFF;
+      const hi = bin.charCodeAt(i * 2 + 1) & 0xFF;
+      let s = (hi << 8) | lo;
+      if (s >= 32768) s -= 65536;
+      ch[i] = s / 32768;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start();
+  } catch(e) {
+    btn.innerHTML = orig;
+  }
+}
+
 function renderVozGrid() {
   const grid = document.getElementById("voz-grid");
   if (!grid) return;
   grid.innerHTML = "";
   for (const v of GEMINI_VOICES) {
     const btn = document.createElement("div");
-    btn.style.cssText = "background:#1E2D36;border:1.5px solid " + (v.id===ttsVoice?"#25D366":"#2A3942") + ";border-radius:10px;padding:9px 10px;cursor:pointer;user-select:none;transition:all .15s;";
-    btn.innerHTML = '<div style="color:' + (v.id===ttsVoice?"#25D366":"#E9EDEF") + ';font-size:13px;font-weight:' + (v.id===ttsVoice?"700":"400") + ';">' + v.id + '</div><div style="color:#8696A0;font-size:11px;">' + v.desc + '</div>';
+    const ativo = v.id === ttsVoice;
+    btn.style.cssText = "background:#1E2D36;border:1.5px solid " + (ativo?"#25D366":"#2A3942") + ";border-radius:10px;padding:9px 10px;cursor:pointer;user-select:none;transition:all .15s;";
+    btn.innerHTML = '<div style="color:' + (ativo?"#25D366":"#E9EDEF") + ';font-size:13px;font-weight:' + (ativo?"700":"400") + ';">' + v.id + ' 🔊</div><div style="color:#8696A0;font-size:11px;">' + v.desc + '</div>';
     btn.onclick = () => {
       ttsVoice = v.id;
       try { localStorage.setItem("dino_tts_voice", v.id); } catch(e) {}
       renderVozGrid();
+      previewVoz(v.id, document.querySelector("#voz-grid div:nth-child(" + (GEMINI_VOICES.indexOf(v)+1) + ")"));
     };
     grid.appendChild(btn);
   }
