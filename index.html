@@ -2081,7 +2081,7 @@ async function processarFilaTTS() {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": chave },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: texto }] }],
+            contents: [{ role: "user", parts: [{ text: texto }] }],
             generationConfig: {
               responseModalities: ["AUDIO"],
               speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Dipper" } } }
@@ -2092,12 +2092,11 @@ async function processarFilaTTS() {
       const json = await res.json();
       const errCode = json?.error?.code || res.status;
       if (errCode === 429 || errCode === 401 || errCode === 403) {
-        // Chave esgotada — troca só a chave de voz
         geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length;
         continue;
       }
       const b64 = json?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-      if (!b64) break; // resposta inválida, desiste silenciosamente
+      if (!b64) { geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length; continue; }
 
       const bin = atob(b64);
       const ctx = getAudioCtx();
@@ -2116,23 +2115,39 @@ async function processarFilaTTS() {
       src.connect(ctx.destination);
       src.onended = () => { ttsRodando = false; processarFilaTTS(); };
       src.start();
-      return; // sucesso — sai do loop
+      return; // sucesso
     } catch(e) {
-      break; // erro de rede, desiste
+      continue; // tenta próxima chave
     }
   }
-  // Gemini TTS falhou — usa Web Speech API como fallback
+
+  // Gemini TTS falhou — fallback Web Speech API com voz masculina
   if (window.speechSynthesis) {
-    const utt = new SpeechSynthesisUtterance(texto);
-    utt.lang  = "pt-BR";
-    utt.rate  = 1.05;
-    utt.pitch = 1.0;
-    utt.onend  = () => { ttsRodando = false; processarFilaTTS(); };
-    utt.onerror = () => { ttsRodando = false; processarFilaTTS(); };
-    // Garante que o contexto de áudio está ativo antes de falar
-    try { getAudioCtx(); } catch(e) {}
-    window.speechSynthesis.cancel(); // limpa fila interna do browser
-    window.speechSynthesis.speak(utt);
+    const falarComVoz = () => {
+      const utt = new SpeechSynthesisUtterance(texto);
+      utt.lang  = "pt-BR";
+      utt.rate  = 1.0;
+      utt.pitch = 0.85; // mais grave, similar ao Dipper
+      // Tenta encontrar voz masculina em português
+      const voices = window.speechSynthesis.getVoices();
+      const vogalMasc = voices.find(v =>
+        v.lang.startsWith("pt") &&
+        (v.name.toLowerCase().includes("male") ||
+         v.name.toLowerCase().includes("masc") ||
+         v.name.toLowerCase().includes("brasil") && !v.name.toLowerCase().includes("female"))
+      ) || voices.find(v => v.lang.startsWith("pt"));
+      if (vogalMasc) utt.voice = vogalMasc;
+      utt.onend  = () => { ttsRodando = false; processarFilaTTS(); };
+      utt.onerror = () => { ttsRodando = false; processarFilaTTS(); };
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utt);
+    };
+    // Vozes podem não estar carregadas ainda
+    if (window.speechSynthesis.getVoices().length > 0) {
+      falarComVoz();
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => { falarComVoz(); };
+    }
     return;
   }
   ttsRodando = false;
