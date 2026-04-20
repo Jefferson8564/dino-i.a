@@ -2111,8 +2111,6 @@ async function processarFilaTTS() {
   ttsRodando = true;
   const texto = ttsQueue.shift();
 
-  // ── Tenta Gemini TTS ──
-  let geminiOk = false;
   for (let tentativa = 0; tentativa < GEMINI_KEYS.length; tentativa++) {
     const chave = GEMINI_KEYS[ttsKeyIndex];
     try {
@@ -2162,42 +2160,12 @@ async function processarFilaTTS() {
       src.connect(ctx.destination);
       src.onended = () => { ttsRodando = false; processarFilaTTS(); };
       src.start();
-      geminiOk = true;
       return;
     } catch(e) {
       ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length;
     }
   }
-
-  // ── Gemini falhou → fala com Web Speech API (garante que sempre fala) ──
-  if (!geminiOk && window.speechSynthesis) {
-    const falar = () => {
-      window.speechSynthesis.cancel();
-      const utt = new SpeechSynthesisUtterance(texto);
-      utt.lang  = "pt-BR";
-      utt.rate  = 0.95;
-      utt.pitch = 0.8;
-      const voices = window.speechSynthesis.getVoices();
-      const voz = voices.find(v => v.lang === "pt-BR" && /male|masc/i.test(v.name))
-               || voices.find(v => v.lang === "pt-BR")
-               || voices.find(v => v.lang.startsWith("pt"))
-               || null;
-      if (voz) utt.voice = voz;
-      utt.onend  = () => { ttsRodando = false; processarFilaTTS(); };
-      utt.onerror = () => { ttsRodando = false; processarFilaTTS(); };
-      window.speechSynthesis.speak(utt);
-    };
-    if (window.speechSynthesis.getVoices().length > 0) {
-      falar();
-    } else {
-      window.speechSynthesis.onvoiceschanged = () => {
-        window.speechSynthesis.onvoiceschanged = null;
-        falar();
-      };
-    }
-    return;
-  }
-
+  // Gemini falhou — silêncio (sem fallback Chrome)
   ttsRodando = false;
   processarFilaTTS();
 }
