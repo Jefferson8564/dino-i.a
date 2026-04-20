@@ -304,6 +304,7 @@ let pendente        = null;   // pagamento aguardando confirmacao
 let pendenteSug     = null;   // sugestoes fuzzy aguardando escolha
 let clientesCache   = null;
 let ultimoPagamento = null;  // dados do último pagamento para comprovante
+let pixDadosUrl     = null;  // dados do PIX que vieram pela URL (persistem durante a sessão)
 
 // ── STORAGE LOCAL (20 dias) ──
 const STORAGE_KEY = "dino_chat_v1";
@@ -482,8 +483,8 @@ async function executarPagamento(phone, val, pixDados) {
       valor:         val,
       data_pix:      dataPix,
       hora_pix:      horaPix,
-      destino:       "O Rei da Coxinha",
-      remetente_pix: c.name,
+      destino:       (pixDados && pixDados.destino) || "O Rei da Coxinha",
+      remetente_pix: (pixDados && pixDados.nomeUrl) || c.name,
       adm:           true
     });
   } catch(e) { console.warn("Aviso: nao foi possivel registrar em pagamentos_pix", e); }
@@ -998,7 +999,7 @@ async function processarTexto(texto) {
       }
       const novoSaldo = debtAtual - valorFinal;
       const saldoDepois = novoSaldo > 0 ? "Saldo apos: R$ " + novoSaldo.toFixed(2).replace(".",",") : novoSaldo < 0 ? "Credito apos: R$ " + Math.abs(novoSaldo).toFixed(2).replace(".",",") : "Conta quitada";
-      pendente = { cliente:escolha, valor:valorFinal };
+      pendente = { cliente:escolha, valor:valorFinal, pixDados: pixDadosUrl || null };
       const msg = "Confirmar pagamento?\n\n" + escolha.name + "\nValor: R$ " + valorFinal.toFixed(2).replace(".",",") + "\nDebito atual: R$ " + debtAtual.toFixed(2).replace(".",",") + "\n" + saldoDepois;
       addMsg("bot", msg, true);
       historico.push({ role:"assistant", content:msg });
@@ -1072,7 +1073,7 @@ async function processarTexto(texto) {
 
       const novoSaldo = debtAtual - valorFinal;
       const saldoDepois = novoSaldo > 0 ? "Saldo apos: R$ " + novoSaldo.toFixed(2).replace(".",",") : novoSaldo < 0 ? "Credito apos: R$ " + Math.abs(novoSaldo).toFixed(2).replace(".",",") : "Conta quitada";
-      pendente = { cliente, valor:valorFinal };
+      pendente = { cliente, valor:valorFinal, pixDados: pixDadosUrl || null };
       document.getElementById("typing").style.display = "none";
       const msg = "Confirmar pagamento?\n\n" + cliente.name + "\nValor: R$ " + valorFinal.toFixed(2).replace(".",",") + "\nDebito atual: R$ " + debtAtual.toFixed(2).replace(".",",") + "\n" + saldoDepois;
       addMsg("bot", msg, true);
@@ -1445,12 +1446,14 @@ function lerPixDaURL() {
   if (!nome.trim() || !sobrenome.trim()) return null;
   const valorNum = parseFloat(valorRaw.replace(/\./g,'').replace(',','.'));
   if (isNaN(valorNum) || valorNum <= 0) return null;
+  const destino = 'Jefferson Leandro (via picpay)';
   return {
     valor:    valorNum,
     valorFmt: 'R$ ' + valorNum.toFixed(2).replace('.',','),
     data,
     hora,
-    remetente: nome + ' ' + sobrenome
+    remetente: nome + ' ' + sobrenome,
+    destino
   };
 }
 
@@ -1503,6 +1506,7 @@ setTimeout(() => {
   // Verifica se chegou um PIX via URL
   const pix = lerPixDaURL();
   if (pix) {
+    pixDadosUrl = { data: pix.data, hora: pix.hora, nomeUrl: pix.remetente, destino: pix.destino }; // guarda para usar em qualquer pagamento desta sessão
     const msg =
       "💸 *PIX RECEBIDO*\n" +
       "──────────────────\n" +
