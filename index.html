@@ -150,7 +150,6 @@
       <div class="header-name">𝕕𝕚𝕟𝕠 𝕚.𝕒 <span style="font-size:11px;color:#c75b24;font-weight:400;">&#x25CF; administrador</span></div>
       <div class="header-status" id="headerStatus">online</div>
     </div>
-    <button id="voz-btn" onclick="toggleVoz()" aria-label="Voz" style="background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;transition:opacity .2s;">🔊</button>
     <button id="gear-btn" onclick="abrirCfg()" aria-label="Configurações">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -172,8 +171,6 @@
       <div class="cfg-section-title" style="margin-top:16px;">Diagnóstico</div>
       <button onclick="diagnosticar()" style="width:100%;padding:10px;background:#2A3942;color:#E9EDEF;border:none;border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px;">🔍 Testar conexão com Gemini</button>
       <div id="diag-result" style="color:#8696A0;font-size:12px;text-align:center;min-height:18px;margin-bottom:16px;"></div>
-      <div class="cfg-section-title" style="margin-top:16px;">🔊 Voz do Gemini</div>
-      <div id="voz-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:16px;"></div>
       <div class="cfg-section-title" style="margin-top:16px;">Conversa</div>
       <button onclick="confirmarLimparConversa()" style="width:100%;padding:10px;background:#2D1515;color:#f87171;border:none;border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px;">🗑️ Apagar todas as conversas</button>
       <div id="limpar-confirm" style="display:none;background:#1a1010;border-radius:10px;padding:12px;margin-bottom:14px;text-align:center;">
@@ -378,7 +375,7 @@ function addMsg(role, texto, comBotoes, _time) {
   row.innerHTML = inner;
   msgs().insertBefore(row, document.getElementById("typing"));
   rolar();
-  if (!restaurando) { msgsSalvas.push({role, texto, time: t, comBotoes: !!comBotoes}); salvarLocal(); if (role === 'bot') falarTexto(texto); }
+  if (!restaurando) { msgsSalvas.push({role, texto, time: t, comBotoes: !!comBotoes}); salvarLocal(); if (role === 'bot') falarTTS(texto); }
 }
 
 function addToast(texto, pagData) {
@@ -394,7 +391,6 @@ function addToast(texto, pagData) {
   rolar();
   if (!restaurando) { msgsSalvas.push({toast: true, texto, pagData: pagData || null}); salvarLocal(); }
 }
-
 
 async function carregarClientes() {
   if (clientesCache) return clientesCache;
@@ -1330,65 +1326,7 @@ function atualizarBotoesBarra() {
   document.getElementById("mic-btn").style.display  = temTexto ? "none"  : "flex";
 }
 
-
-
 // ── CONFIGURAÇÕES: engrenagem ──
-
-async function previewVoz(voiceId, btn) {
-  const orig = btn.innerHTML;
-  btn.innerHTML = '<div style="color:#53BDEB;font-size:12px;text-align:center;">⏳...</div>';
-  const chave = GEMINI_KEYS[ttsKeyIndex];
-  try {
-    const res = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": chave },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: "Olá! Esta é a voz " + voiceId + "." }] }],
-          generationConfig: {
-            responseModalities: ["AUDIO"],
-            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceId } } }
-          }
-        })
-      }
-    );
-    const json = await res.json();
-    const b64 = (json?.candidates?.[0]?.content?.parts || []).find(p => p?.inlineData?.data)?.inlineData?.data;
-    btn.innerHTML = orig;
-    if (!b64) return;
-    const bin = atob(b64);
-    const ctx = getAudioCtx();
-    const n = bin.length / 2;
-    const buf = ctx.createBuffer(1, n, 24000);
-    const ch = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) {
-      const lo = bin.charCodeAt(i*2) & 0xFF, hi = bin.charCodeAt(i*2+1) & 0xFF;
-      let s = (hi<<8)|lo; if (s>=32768) s-=65536; ch[i]=s/32768;
-    }
-    const src = ctx.createBufferSource();
-    src.buffer = buf; src.connect(ctx.destination); src.start();
-  } catch(e) { btn.innerHTML = orig; }
-}
-
-function renderVozGrid() {
-  const grid = document.getElementById("voz-grid");
-  if (!grid) return;
-  grid.innerHTML = "";
-  GEMINI_VOICES.forEach((v, idx) => {
-    const ativo = v.id === ttsVoice;
-    const btn = document.createElement("div");
-    btn.style.cssText = "background:#1E2D36;border:1.5px solid "+(ativo?"#25D366":"#2A3942")+";border-radius:10px;padding:9px 10px;cursor:pointer;user-select:none;-webkit-user-select:none;transition:all .15s;";
-    btn.innerHTML = '<div style="color:'+(ativo?"#25D366":"#E9EDEF")+';font-size:13px;font-weight:'+(ativo?"700":"400")+';">'+v.id+' 🔊</div><div style="color:#8696A0;font-size:11px;">'+v.desc+'</div>';
-    btn.onclick = () => {
-      ttsVoice = v.id;
-      try { localStorage.setItem("dino_tts_voice", v.id); } catch(e) {}
-      renderVozGrid();
-      previewVoz(v.id, document.querySelectorAll("#voz-grid > div")[idx]);
-    };
-    grid.appendChild(btn);
-  });
-}
 
 function renderKeyGrid() {
   const grid = document.getElementById("key-grid");
@@ -1431,7 +1369,6 @@ function renderModelList() {
 function abrirCfg() {
   document.getElementById("cfg-overlay").classList.add("open");
   renderKeyGrid();
-  renderVozGrid();
 }
 function fecharCfg() {
   document.getElementById("cfg-overlay").classList.remove("open");
@@ -1572,7 +1509,6 @@ setTimeout(() => {
 // ── PEDIDOS ──────────────────────────────────────────────────────
 let pedidoAtual = null;   // { cliente, pedido (db row), itens[], cardapio[], editavel }
 let pedidosInline = null; // { cliente, rows[], cardapioArr } — card exibido no chat
-
 
 async function listarTodosPedidos(cliente) {
   try {
@@ -2102,127 +2038,112 @@ function fecharPedidoFora(e) {
   if (e.target === document.getElementById("pedido-overlay")) fecharPedido();
 }
 
-// ── TTS GEMINI ──────────────────────────────────────────────────
-const GEMINI_VOICES = [
-  { id:"Zephyr",    desc:"Brilhante" },   { id:"Puck",    desc:"Animada" },
-  { id:"Charon",    desc:"Informativa" },  { id:"Kore",    desc:"Firme" },
-  { id:"Fenrir",    desc:"Excitável" },    { id:"Aoede",   desc:"Suave" },
-  { id:"Leda",      desc:"Jovial" },       { id:"Orus",    desc:"Confiante" },
-  { id:"Dipper",    desc:"Calma · Grave"}, { id:"Schedar", desc:"Segura" },
-  { id:"Gacrux",    desc:"Madura" },       { id:"Sulafat", desc:"Calorosa" },
-  { id:"Vindemiatrix",desc:"Delicada" },   { id:"Achernar",desc:"Clara" },
-  { id:"Zubenelgenubi",desc:"Casual" },    { id:"Pulcherrima",desc:"Expressiva" },
-];
-let ttsKeyIndex  = 0;
-let ttsVoice     = (() => { try { return localStorage.getItem("dino_tts_voice") || "Kore"; } catch(e) { return "Kore"; } })();
-let vozAtiva     = true;
-let ttsAtual     = null; // AbortController da fala em curso
-let audioCtx     = null;
+// ── TTS GEMINI (voz Leda) ───────────────────────────────────────
+const TTS_VOICE   = "Leda";
+let   ttsKeyIdx   = 0;
+let   ttsAbort    = null;
+let   ttsAudioCtx = null;
 
-function getAudioCtx() {
-  if (!audioCtx || audioCtx.state === "closed")
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
-  if (audioCtx.state === "suspended") audioCtx.resume();
-  return audioCtx;
+function getTTSCtx() {
+  if (!ttsAudioCtx || ttsAudioCtx.state === "closed")
+    ttsAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+  if (ttsAudioCtx.state === "suspended") ttsAudioCtx.resume();
+  return ttsAudioCtx;
 }
 
-function limparParaFala(texto) {
-  return texto
-    .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FEFF}]/gu, "")
-    .replace(/[➖─━─-]/g, "")
-    .replace(/\*+([^*]*)\*+/g, "$1")
+function limparTTS(t) {
+  return t
+    .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, "")
     .replace(/https?:\/\/\S+/g, "")
     .replace(/[\n\r]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-
-async function falarTexto(texto) {
-  if (!vozAtiva || !texto) return;
-  const limpo = limparParaFala(texto);
-  if (!limpo || limpo.length < 2) return;
-
-  // Cancela qualquer fala anterior
-  if (ttsAtual) { ttsAtual.aborted = true; }
-  const ctrl = { aborted: false };
-  ttsAtual = ctrl;
-
-  // Envia o texto inteiro de uma vez (sem quebrar em frases — menos delay)
-  async function buscarAudio(txt) {
-    for (let i = 0; i < GEMINI_KEYS.length; i++) {
-      if (ctrl.aborted) return null;
-      const idx  = (ttsKeyIndex + i) % GEMINI_KEYS.length;
-      const key  = GEMINI_KEYS[idx];
-      try {
-        const res = await fetch(
-          "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",
-          {
-            method : "POST",
-            headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-            body   : JSON.stringify({
-              contents       : [{ role: "user", parts: [{ text: txt }] }],
-              generationConfig: {
-                responseModalities: ["AUDIO"],
-                speechConfig: {
-                  voiceConfig: { prebuiltVoiceConfig: { voiceName: ttsVoice } }
-                }
-              }
-            })
-          }
-        );
-        const json = await res.json();
-        const code = json?.error?.code;
-        if (code === 429 || code === 401 || code === 403) {
-          ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length; continue;
+async function buscarAudioGemini(txt) {
+  for (let i = 0; i < GEMINI_KEYS.length; i++) {
+    const idx  = (ttsKeyIdx + i) % GEMINI_KEYS.length;
+    const key  = GEMINI_KEYS[idx];
+    try {
+      const res = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",
+        {
+          method : "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+          body   : JSON.stringify({
+            contents        : [{ role: "user", parts: [{ text: txt }] }],
+            generationConfig: {
+              responseModalities: ["AUDIO"],
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: TTS_VOICE } } }
+            }
+          })
         }
-        const b64 = (json?.candidates?.[0]?.content?.parts || [])
-                      .find(p => p?.inlineData?.data)?.inlineData?.data;
-        if (!b64) { ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length; continue; }
-        ttsKeyIndex = idx;
-        return b64;
-      } catch(e) {
-        ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length;
+      );
+      const json = await res.json();
+      const code = json?.error?.code;
+      if (code === 429 || code === 401 || code === 403) {
+        ttsKeyIdx = (ttsKeyIdx + 1) % GEMINI_KEYS.length; continue;
       }
+      const b64 = (json?.candidates?.[0]?.content?.parts || [])
+                    .find(p => p?.inlineData?.data)?.inlineData?.data;
+      if (!b64) { ttsKeyIdx = (ttsKeyIdx + 1) % GEMINI_KEYS.length; continue; }
+      ttsKeyIdx = idx;
+      return b64;
+    } catch(e) {
+      ttsKeyIdx = (ttsKeyIdx + 1) % GEMINI_KEYS.length;
     }
-    return null;
   }
-
-  function tocarPCM(b64) {
-    return new Promise(resolve => {
-      if (ctrl.aborted) return resolve();
-      try {
-        const bin = atob(b64);
-        const ctx = getAudioCtx();
-        const n   = bin.length / 2;
-        const buf = ctx.createBuffer(1, n, 24000);
-        const ch  = buf.getChannelData(0);
-        for (let j = 0; j < n; j++) {
-          const lo = bin.charCodeAt(j * 2)     & 0xFF;
-          const hi = bin.charCodeAt(j * 2 + 1) & 0xFF;
-          let s    = (hi << 8) | lo;
-          if (s >= 32768) s -= 65536;
-          ch[j] = s / 32768;
-        }
-        const src = ctx.createBufferSource();
-        src.buffer = buf;
-        src.connect(ctx.destination);
-        src.onended = resolve;
-        src.start();
-      } catch(e) { resolve(); }
-    });
-  }
-
-  const b64 = await buscarAudio(limpo);
-  if (b64 && !ctrl.aborted) await tocarPCM(b64);
+  return null;
 }
 
-function toggleVoz() {
-  vozAtiva = !vozAtiva;
-  const btn = document.getElementById("voz-btn");
-  if (btn) { btn.textContent = vozAtiva ? "🔊" : "🔇"; btn.style.opacity = vozAtiva ? "1" : "0.4"; }
+function tocarPCM(b64, ctrl) {
+  return new Promise(resolve => {
+    if (ctrl.aborted) return resolve();
+    try {
+      const bin = atob(b64);
+      const ctx = getTTSCtx();
+      const n   = bin.length / 2;
+      const buf = ctx.createBuffer(1, n, 24000);
+      const ch  = buf.getChannelData(0);
+      for (let j = 0; j < n; j++) {
+        const lo = bin.charCodeAt(j*2)   & 0xFF;
+        const hi = bin.charCodeAt(j*2+1) & 0xFF;
+        let s = (hi<<8)|lo; if (s>=32768) s-=65536;
+        ch[j] = s/32768;
+      }
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.onended = resolve;
+      src.start();
+    } catch(e) { resolve(); }
+  });
 }
 
+async function falarTTS(texto) {
+  if (!texto) return;
+  const limpo = limparTTS(texto);
+  if (limpo.length < 2) return;
+
+  // Cancela fala anterior
+  if (ttsAbort) ttsAbort.aborted = true;
+  const ctrl = { aborted: false };
+  ttsAbort = ctrl;
+
+  // Divide em: 1ª frase (curta) + resto — para começar a tocar mais rápido
+  const m = limpo.match(/^([^.!?]{1,80}[.!?]?)\s*([\s\S]*)$/);
+  const primeira = m ? m[1].trim() : limpo;
+  const resto    = m ? m[2].trim() : "";
+
+  // Busca a 1ª frase e o resto em paralelo
+  const [b64a, b64b] = await Promise.all([
+    buscarAudioGemini(primeira),
+    resto.length > 2 ? buscarAudioGemini(resto) : Promise.resolve(null)
+  ]);
+
+  if (b64a && !ctrl.aborted) await tocarPCM(b64a, ctrl);
+  if (b64b && !ctrl.aborted) await tocarPCM(b64b, ctrl);
+}
 
 // ── MICROFONE (Speech Recognition) ──────────────────────────────
 let reconhecimento = null;
