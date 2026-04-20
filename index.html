@@ -2132,8 +2132,6 @@ function fecharPedidoFora(e) {
 // ── TTS GEMINI ──────────────────────────────────────────────────
 let vozAtiva = true;
 let audioCtx = null;
-let ttsQueue = [];
-let ttsRodando = false;
 
 function getAudioCtx() {
   if (!audioCtx || audioCtx.state === "closed")
@@ -2153,88 +2151,55 @@ function limparParaFala(texto) {
     .trim();
 }
 
-async function processarFilaTTS() {
-  if (ttsRodando || ttsQueue.length === 0) return;
-  ttsRodando = true;
-  const texto = ttsQueue.shift();
 
-  for (let tentativa = 0; tentativa < GEMINI_KEYS.length; tentativa++) {
-    const chave = GEMINI_KEYS[ttsKeyIndex];
-    try {
-      const res = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": chave },
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: texto }] }],
-            generationConfig: {
-              responseModalities: ["AUDIO"],
-              speechConfig: {
-                voiceConfig: {
-                  prebuiltVoiceConfig: { voiceName: ttsVoice }
-                }
-              }
-            }
-          })
-        }
-      );
-      const json = await res.json();
-      const errCode = json?.error?.code || (res.ok ? 0 : res.status);
-      if (errCode === 429 || errCode === 401 || errCode === 403) {
-        ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length;
-        continue;
-      }
-      const parts = json?.candidates?.[0]?.content?.parts || [];
-      const audioPart = parts.find(p => p?.inlineData?.data);
-      const b64 = audioPart?.inlineData?.data;
-      if (!b64) { ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length; continue; }
 
-      const bin = atob(b64);
-      const ctx = getAudioCtx();
-      const n   = bin.length / 2;
-      const buf = ctx.createBuffer(1, n, 24000);
-      const ch  = buf.getChannelData(0);
-      for (let i = 0; i < n; i++) {
-        const lo = bin.charCodeAt(i * 2) & 0xFF;
-        const hi = bin.charCodeAt(i * 2 + 1) & 0xFF;
-        let s = (hi << 8) | lo;
-        if (s >= 32768) s -= 65536;
-        ch[i] = s / 32768;
-      }
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.connect(ctx.destination);
-      src.onended = () => { ttsRodando = false; processarFilaTTS(); };
-      src.start();
-      return;
-    } catch(e) {
-      ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length;
-    }
-  }
-  // Gemini falhou — silêncio (sem fallback Chrome)
-  ttsRodando = false;
-  processarFilaTTS();
-}
-
-function falarTexto(texto) {
-  if (!vozAtiva) return;
+async function falarTexto(texto) {
+  if (!vozAtiva || !texto) return;
   const limpo = limparParaFala(texto);
   if (!limpo || limpo.length < 3) return;
-  // Divide em frases curtas — começa a tocar a 1ª enquanto gera as demais
-  const frases = limpo.match(/[^.!?]+[.!?]*/g) || [limpo];
-  for (const f of frases) {
-    const t = f.trim();
-    if (t.length >= 3) ttsQueue.push(t);
+
+  const frases = (limpo.match(/[^.!?]+[.!?]*/g) || [limpo]).map(f => f.trim()).filter(f => f.length >= 3);
+
+  for (const frase of frases) {
+    if (!vozAtiva) break;
+    let sucesso = false;
+    for (let i = 0; i < GEMINI_KEYS.length; i++) {
+      const idx = (ttsKeyIndex + i) % GEMINI_KEYS.length;
+      const chave = GEMINI_KEYS[idx];
+      try {
+        const res = await fetch(
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:speak?key=" + chave,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              content: frase,
+              voiceConfig: { prebuiltVoiceConfig: { voiceName: ttsVoice } }
+            })
+          }
+        );
+        if (res.status === 429) { ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length; continue; }
+        if (!res.ok) { ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length; continue; }
+        const json = await res.json();
+        const b64 = json?.audioContent;
+        if (!b64) { ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length; continue; }
+        const audio = new Audio("data:audio/wav;base64," + b64);
+        await new Promise(resolve => { audio.onended = resolve; audio.onerror = resolve; audio.play().catch(resolve); });
+        ttsKeyIndex = idx;
+        sucesso = true;
+        break;
+      } catch(e) {
+        ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length;
+      }
+    }
+    if (!sucesso) break;
   }
-  processarFilaTTS();
 }
 
 function toggleVoz() {
   vozAtiva = !vozAtiva;
   const btn = document.getElementById("voz-btn");
   if (btn) { btn.textContent = vozAtiva ? "🔊" : "🔇"; btn.style.opacity = vozAtiva ? "1" : "0.4"; }
-  if (!vozAtiva) ttsQueue = [];
 }
 
 
