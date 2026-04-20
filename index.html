@@ -375,7 +375,7 @@ function addMsg(role, texto, comBotoes, _time) {
   row.innerHTML = inner;
   msgs().insertBefore(row, document.getElementById("typing"));
   rolar();
-  if (!restaurando) { msgsSalvas.push({role, texto, time: t, comBotoes: !!comBotoes}); salvarLocal(); if (role === 'bot') falarTTS(texto); }
+  if (!restaurando) { msgsSalvas.push({role, texto, time: t, comBotoes: !!comBotoes}); salvarLocal(); }
 }
 
 function addToast(texto, pagData) {
@@ -2036,122 +2036,6 @@ function fecharPedido() {
 
 function fecharPedidoFora(e) {
   if (e.target === document.getElementById("pedido-overlay")) fecharPedido();
-}
-
-// ── TTS GEMINI (voz Leda) ───────────────────────────────────────
-const TTS_VOICE   = "Leda";
-let   ttsKeyIdx   = 0;
-let   ttsAbort    = null;
-let   ttsAudioCtx = null;
-
-function getTTSCtx() {
-  if (!ttsAudioCtx || ttsAudioCtx.state === "closed")
-    ttsAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
-  if (ttsAudioCtx.state === "suspended") ttsAudioCtx.resume();
-  return ttsAudioCtx;
-}
-
-function limparTTS(t) {
-  return t
-    .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, "")
-    .replace(/https?:\/\/\S+/g, "")
-    .replace(/[\n\r]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-async function buscarAudioGemini(txt) {
-  console.log("[TTS] Buscando áudio para:", txt.slice(0, 40));
-  for (let i = 0; i < GEMINI_KEYS.length; i++) {
-    const idx  = (ttsKeyIdx + i) % GEMINI_KEYS.length;
-    const key  = GEMINI_KEYS[idx];
-    try {
-      const res = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",
-        {
-          method : "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-          body   : JSON.stringify({
-            contents        : [{ role: "user", parts: [{ text: txt }] }],
-            generationConfig: {
-              responseModalities: ["AUDIO"],
-              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: TTS_VOICE } } }
-            }
-          })
-        }
-      );
-      const json = await res.json();
-      console.log("[TTS] Resposta HTTP:", res.status, "| error:", json?.error?.message || "nenhum");
-      const code = json?.error?.code;
-      if (code === 429 || code === 401 || code === 403) {
-        ttsKeyIdx = (ttsKeyIdx + 1) % GEMINI_KEYS.length; continue;
-      }
-      const parts = json?.candidates?.[0]?.content?.parts || [];
-      console.log("[TTS] Parts recebidas:", parts.length, "| tem audio:", parts.some(p => p?.inlineData?.data));
-      const b64 = parts.find(p => p?.inlineData?.data)?.inlineData?.data;
-      if (!b64) { ttsKeyIdx = (ttsKeyIdx + 1) % GEMINI_KEYS.length; continue; }
-      ttsKeyIdx = idx;
-      console.log("[TTS] Áudio OK, tamanho b64:", b64.length);
-      return b64;
-    } catch(e) {
-      console.error("[TTS] Erro fetch:", e.message);
-      ttsKeyIdx = (ttsKeyIdx + 1) % GEMINI_KEYS.length;
-    }
-  }
-  console.warn("[TTS] Todas as chaves falharam.");
-  return null;
-}
-
-function tocarPCM(b64, ctrl) {
-  return new Promise(resolve => {
-    if (ctrl.aborted) return resolve();
-    try {
-      const bin = atob(b64);
-      const ctx = getTTSCtx();
-      console.log("[TTS] AudioContext state:", ctx.state);
-      const n   = bin.length / 2;
-      const buf = ctx.createBuffer(1, n, 24000);
-      const ch  = buf.getChannelData(0);
-      for (let j = 0; j < n; j++) {
-        const lo = bin.charCodeAt(j*2)   & 0xFF;
-        const hi = bin.charCodeAt(j*2+1) & 0xFF;
-        let s = (hi<<8)|lo; if (s>=32768) s-=65536;
-        ch[j] = s/32768;
-      }
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.connect(ctx.destination);
-      src.onended = resolve;
-      src.start();
-      console.log("[TTS] Tocando áudio...");
-    } catch(e) {
-      console.error("[TTS] Erro ao tocar:", e.message);
-      resolve();
-    }
-  });
-}
-
-async function falarTTS(texto) {
-  if (!texto) return;
-  const limpo = limparTTS(texto);
-  if (limpo.length < 2) return;
-  console.log("[TTS] falarTTS chamado:", limpo.slice(0, 60));
-
-  if (ttsAbort) ttsAbort.aborted = true;
-  const ctrl = { aborted: false };
-  ttsAbort = ctrl;
-
-  const m = limpo.match(/^([^.!?]{1,80}[.!?]?)\s*([\s\S]*)$/);
-  const primeira = m ? m[1].trim() : limpo;
-  const resto    = m ? m[2].trim() : "";
-
-  const [b64a, b64b] = await Promise.all([
-    buscarAudioGemini(primeira),
-    resto.length > 2 ? buscarAudioGemini(resto) : Promise.resolve(null)
-  ]);
-
-  if (b64a && !ctrl.aborted) await tocarPCM(b64a, ctrl);
-  if (b64b && !ctrl.aborted) await tocarPCM(b64b, ctrl);
 }
 
 // ── MICROFONE (Speech Recognition) ──────────────────────────────
