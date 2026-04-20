@@ -172,6 +172,8 @@
       <div class="cfg-section-title" style="margin-top:16px;">Diagnóstico</div>
       <button onclick="diagnosticar()" style="width:100%;padding:10px;background:#2A3942;color:#E9EDEF;border:none;border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px;">🔍 Testar conexão com Gemini</button>
       <div id="diag-result" style="color:#8696A0;font-size:12px;text-align:center;min-height:18px;margin-bottom:16px;"></div>
+      <div class="cfg-section-title" style="margin-top:16px;">🔊 Voz do Gemini</div>
+      <div id="voz-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:16px;"></div>
       <div class="cfg-section-title" style="margin-top:16px;">Conversa</div>
       <button onclick="confirmarLimparConversa()" style="width:100%;padding:10px;background:#2D1515;color:#f87171;border:none;border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px;">🗑️ Apagar todas as conversas</button>
       <div id="limpar-confirm" style="display:none;background:#1a1010;border-radius:10px;padding:12px;margin-bottom:14px;text-align:center;">
@@ -227,6 +229,25 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const GEMINI_KEYS = __GEMINI_KEYS__;
 let geminiKeyIndex = (() => { try { const s = localStorage.getItem("dino_gemini_key_idx"); return s !== null ? parseInt(s) : 0; } catch(e) { return 0; } })();
 let ttsKeyIndex = 0; // índice independente para TTS — não interfere no chat
+const GEMINI_VOICES = [
+  { id:"Zephyr",       desc:"Brilhante" },
+  { id:"Puck",         desc:"Animada" },
+  { id:"Charon",       desc:"Informativa" },
+  { id:"Kore",         desc:"Firme" },
+  { id:"Fenrir",       desc:"Excitável" },
+  { id:"Aoede",        desc:"Suave" },
+  { id:"Leda",         desc:"Jovial" },
+  { id:"Orus",         desc:"Confiante" },
+  { id:"Dipper",       desc:"Calma · Grave" },
+  { id:"Schedar",      desc:"Segura" },
+  { id:"Gacrux",       desc:"Madura" },
+  { id:"Sulafat",      desc:"Calorosa" },
+  { id:"Vindemiatrix", desc:"Delicada" },
+  { id:"Achernar",     desc:"Suave · Clara" },
+  { id:"Zubenelgenubi",desc:"Casual" },
+  { id:"Pulcherrima",  desc:"Expressiva" },
+];
+let ttsVoice = (() => { try { return localStorage.getItem("dino_tts_voice") || "Dipper"; } catch(e) { return "Dipper"; } })();
 const GEMINI_MODELS = [
   { id: "gemini-2.5-flash", nome: "2.5 Flash" },
 ];
@@ -1332,6 +1353,23 @@ function atualizarBotoesBarra() {
 
 
 // ── CONFIGURAÇÕES: engrenagem ──
+function renderVozGrid() {
+  const grid = document.getElementById("voz-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  for (const v of GEMINI_VOICES) {
+    const btn = document.createElement("div");
+    btn.style.cssText = "background:#1E2D36;border:1.5px solid " + (v.id===ttsVoice?"#25D366":"#2A3942") + ";border-radius:10px;padding:9px 10px;cursor:pointer;user-select:none;transition:all .15s;";
+    btn.innerHTML = '<div style="color:' + (v.id===ttsVoice?"#25D366":"#E9EDEF") + ';font-size:13px;font-weight:' + (v.id===ttsVoice?"700":"400") + ';">' + v.id + '</div><div style="color:#8696A0;font-size:11px;">' + v.desc + '</div>';
+    btn.onclick = () => {
+      ttsVoice = v.id;
+      try { localStorage.setItem("dino_tts_voice", v.id); } catch(e) {}
+      renderVozGrid();
+    };
+    grid.appendChild(btn);
+  }
+}
+
 function renderKeyGrid() {
   const grid = document.getElementById("key-grid");
   if (!grid) return;
@@ -1373,6 +1411,7 @@ function renderModelList() {
 function abrirCfg() {
   document.getElementById("cfg-overlay").classList.add("open");
   renderKeyGrid();
+  renderVozGrid();
 }
 function fecharCfg() {
   document.getElementById("cfg-overlay").classList.remove("open");
@@ -2086,7 +2125,7 @@ async function processarFilaTTS() {
             generationConfig: {
               speechConfig: {
                 voiceConfig: {
-                  prebuiltVoiceConfig: { voiceName: "Dipper" }
+                  prebuiltVoiceConfig: { voiceName: ttsVoice }
                 }
               }
             }
