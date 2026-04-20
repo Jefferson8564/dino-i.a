@@ -437,7 +437,7 @@ function encontrarCliente(clientes, nome) {
 }
 
 // ── PAGAMENTO (identico ao ADM) ──
-async function executarPagamento(phone, val, pixDados) {
+async function executarPagamento(phone, val) {
   const dados = await sbGet("clientes", { phone });
   const c = Array.isArray(dados) ? dados[0] : null;
   if (!c) throw new Error("Cliente nao encontrado.");
@@ -460,20 +460,6 @@ async function executarPagamento(phone, val, pixDados) {
     diamantes:       (Number(c.diamantes||0)) + novDi,
     total_acumulado: sobra,
   });
-
-  // Se veio de um link PIX, registra em pagamentos_pix para evitar duplicata
-  if (pixDados && pixDados.data && pixDados.hora) {
-    const destino = 'Jefferson Leandro (via picpay)';
-    await sbInsert("pagamentos_pix", {
-      phone,
-      valor:         val,
-      data_pix:      pixDados.data,
-      hora_pix:      pixDados.hora,
-      destino,
-      remetente_pix: pixDados.nomeUrl || "",
-      adm:           true
-    });
-  }
 
   const dh = dataHoraSP();
   const saldoTexto = novoSaldo > 0
@@ -562,7 +548,7 @@ async function confirmarPendente() {
     return;
   }
 
-  const { cliente, valor, zerarCredito, pixDados } = pendente;
+  const { cliente, valor, zerarCredito } = pendente;
   pendente = null;
   setStatus(true);
   document.getElementById("typing").style.display = "flex";
@@ -575,7 +561,7 @@ async function confirmarPendente() {
       addToast("✅ Crédito zerado ♻️");
       historico.push({ role:"assistant", content:"Crédito zerado." });
     } else {
-      const res = await executarPagamento(cliente.phone, valor, pixDados);
+      const res = await executarPagamento(cliente.phone, valor);
       document.getElementById("typing").style.display = "none";
       addToast("♻️ comprovante", { phone: cliente.phone, nome: res.nome, valor, novoSaldo: res.novoSaldo, novTk: res.novTk, novDi: res.novDi });
       historico.push({ role:"assistant", content: "✅ " + res.nome });
@@ -1511,9 +1497,12 @@ setTimeout(() => {
     addMsg("bot", msg);
     historico.push({ role:"assistant", content: msg });
 
-    // Pré-preenche o input para facilitar o registro
+    // Envia automaticamente o comando de pagamento
     const input = document.getElementById("msg-input");
-    if (input) input.value = pix.remetente + " pagou " + pix.valorFmt;
+    if (input) {
+      input.value = pix.remetente + " pagou " + pix.valorFmt;
+      setTimeout(() => enviar(), 300);
+    }
   } else if (!restaurado) {
     addMsg("bot", "Ola! Sou o 𝕕𝕚𝕟𝕠 𝕚.𝕒.\n\nExemplos:\n- Jefferson pagou 50\n- Maria pagou\n- Lanca 25 do Joao\n- Comprovantes do Jefferson\n- Comprovantes da Maria de 01/04/2026 ate 17/04/2026");
   }
