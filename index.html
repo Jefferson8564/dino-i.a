@@ -472,21 +472,30 @@ async function executarPagamento(phone, val, pixDados) {
   const miolo = "──────────────────\nCliente: " + c.name + "\nData/Hora: " + dh + "\nValor pago: R$ " + val.toFixed(2).replace(".",",") + "\n" + saldoTexto + "\n──────────────────";
   await sbInsert("notificacoes", { customer_phone:phone, tipo:"pagamento", valor:val, comprovante:miolo });
 
-  // ── REGISTRAR NA TABELA pagamentos_pix (igual ao pix.html) ──
-  // Usa data/hora do PIX original (quando veio pela URL), senão usa hora atual
+  // ── REGISTRAR NA TABELA pagamentos_pix ──
+  // Se veio da URL, checa se já foi registrado pelo pix.html (ADM) antes de inserir
   const agora2  = new Date();
   const dataPix = (pixDados && pixDados.data) || agora2.toLocaleDateString("pt-BR", { timeZone:"America/Sao_Paulo", day:"2-digit", month:"2-digit", year:"2-digit" });
   const horaPix = (pixDados && pixDados.hora) || agora2.toLocaleTimeString("pt-BR", { timeZone:"America/Sao_Paulo", hour:"2-digit", minute:"2-digit" });
   try {
-    await sbInsert("pagamentos_pix", {
-      phone:         phone,
-      valor:         val,
-      data_pix:      dataPix,
-      hora_pix:      horaPix,
-      destino:       (pixDados && pixDados.destino) || "O Rei da Coxinha",
-      remetente_pix: (pixDados && pixDados.nomeUrl) || c.name,
-      adm:           true
-    });
+    // Se tem dados da URL, verifica se já existe registro com esses dados (inserido pelo pix.html)
+    let jaExiste = false;
+    if (pixDados && pixDados.data && pixDados.hora) {
+      const checkUrl = SUPABASE_URL + "/rest/v1/pagamentos_pix?select=phone&valor=eq." + val + "&data_pix=eq." + encodeURIComponent(dataPix) + "&hora_pix=eq." + encodeURIComponent(horaPix) + "&limit=1";
+      const checkRes = await (await fetch(checkUrl, { headers: SB_H })).json();
+      jaExiste = Array.isArray(checkRes) && checkRes.length > 0;
+    }
+    if (!jaExiste) {
+      await sbInsert("pagamentos_pix", {
+        phone:         phone,
+        valor:         val,
+        data_pix:      dataPix,
+        hora_pix:      horaPix,
+        destino:       (pixDados && pixDados.destino) || "O Rei da Coxinha",
+        remetente_pix: (pixDados && pixDados.nomeUrl) || c.name,
+        adm:           true
+      });
+    }
   } catch(e) { console.warn("Aviso: nao foi possivel registrar em pagamentos_pix", e); }
 
   clientesCache = null;
@@ -580,7 +589,7 @@ async function confirmarPendente() {
       addToast("✅ Crédito zerado ♻️");
       historico.push({ role:"assistant", content:"Crédito zerado." });
     } else {
-      const res = await executarPagamento(cliente.phone, valor, pixDadosPendente);
+      const res = await executarPagamento(cliente.phone, valor, pixDadosPendente || pixDadosUrl);
       document.getElementById("typing").style.display = "none";
       addToast("♻️ comprovante", { phone: cliente.phone, nome: res.nome, valor, novoSaldo: res.novoSaldo, novTk: res.novTk, novDi: res.novDi });
       historico.push({ role:"assistant", content: "✅ " + res.nome });
@@ -766,6 +775,12 @@ async function enviar() {
 
 async function processarTexto(texto) {
 
+  // ── GARANTE pixDadosUrl ATUALIZADO COM A URL ATUAL ──
+  if (!pixDadosUrl) {
+    const pixUrl = lerPixDaURL();
+    if (pixUrl) pixDadosUrl = { data: pixUrl.data, hora: pixUrl.hora, nomeUrl: pixUrl.remetente, destino: pixUrl.destino };
+  }
+
   // ── DETECTA LINK PIX COLADO ──────────────────────────────────
   // Aceita: "?39,90=18/04/26=12:58=Anderson=Gomes" ou URL completa
   const pixMatch = texto.match(/[?&]?(\d+[,\.]\d{2})=(\d{2}\/\d{2}\/\d{2,4})=(\d{2}:\d{2}(?::\d{2})?)=([A-Za-zÀ-ú]+)=([A-Za-zÀ-ú]+)/);
@@ -800,7 +815,7 @@ async function processarTexto(texto) {
         const debtAtual = Number(c.debt||0);
         const novoSaldo = debtAtual - valorNum;
         const saldoDepois = novoSaldo > 0 ? "Saldo após: R$ " + novoSaldo.toFixed(2).replace('.',',') : novoSaldo < 0 ? "Crédito após: R$ " + Math.abs(novoSaldo).toFixed(2).replace('.',',') : "Conta quitada";
-        pendente = { cliente:c, valor:valorNum, pixDados:{ data, hora, nomeUrl } };
+        pendente = { cliente:c, valor:valorNum, pixDados:{ data, hora, nomeUrl, destino: pixDadosUrl?.destino || 'Jefferson Leandro (via picpay)' } };
         const msg = "💸 PIX recebido!\n\nRemetente: " + nomeUrl + "\nValor: R$ " + valorNum.toFixed(2).replace('.',',') + "\nData: " + data + " às " + hora + "\n\nRegistrar para " + c.name + "?\nDébito atual: R$ " + debtAtual.toFixed(2).replace('.',',') + "\n" + saldoDepois;
         addMsg("bot", msg, true);
         historico.push({ role:"assistant", content: msg });
@@ -859,7 +874,7 @@ async function processarTexto(texto) {
       const debtAtual = Number(escolha.debt||0);
       const novoSaldo = debtAtual - valor;
       const saldoDepois = novoSaldo > 0 ? "Saldo após: R$ " + novoSaldo.toFixed(2).replace('.',',') : novoSaldo < 0 ? "Crédito após: R$ " + Math.abs(novoSaldo).toFixed(2).replace('.',',') : "Conta quitada";
-      pendente = { cliente:escolha, valor, pixDados:{ data, hora, nomeUrl } };
+      pendente = { cliente:escolha, valor, pixDados:{ data, hora, nomeUrl, destino: pixDadosUrl?.destino || 'Jefferson Leandro (via picpay)' } };
       const msg = "Confirmar pagamento?\n\n" + escolha.name + "\nValor: R$ " + valor.toFixed(2).replace('.',',') + "\nDébito atual: R$ " + debtAtual.toFixed(2).replace('.',',') + "\n" + saldoDepois;
       addMsg("bot", msg, true);
       historico.push({ role:"assistant", content: msg });
