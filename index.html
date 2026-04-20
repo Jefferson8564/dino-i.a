@@ -973,8 +973,9 @@ async function processarTexto(texto) {
         rolar();
         try {
           let url = SUPABASE_URL + "/rest/v1/pagamentos_pix?select=*&phone=eq." + encodeURIComponent(escolha.phone) + "&order=created_at.asc";
-          if (data_inicio) { const [d,m,a] = data_inicio.split("/"); url += "&data_pix=gte." + encodeURIComponent(a+"-"+m+"-"+d); }
-          if (data_fim)    { const [d,m,a] = data_fim.split("/");    url += "&data_pix=lte." + encodeURIComponent(a+"-"+m+"-"+d); }
+          // Filtra por created_at (timestamp real) em vez de data_pix (texto inconsistente)
+          if (data_inicio) { const [d,m,a] = data_inicio.split("/"); const ano = a.length===2?"20"+a:a; url += "&created_at=gte." + encodeURIComponent(ano+"-"+m+"-"+d+"T00:00:00"); }
+          if (data_fim)    { const [d,m,a] = data_fim.split("/");    const ano = a.length===2?"20"+a:a; url += "&created_at=lte." + encodeURIComponent(ano+"-"+m+"-"+d+"T23:59:59"); }
           const comprovantes = await (await fetch(url, { headers: SB_H })).json();
           document.getElementById("typing").style.display = "none";
           if (!Array.isArray(comprovantes) || comprovantes.length === 0) {
@@ -1216,13 +1217,12 @@ async function processarTexto(texto) {
       // Busca comprovantes na tabela pagamentos_pix
       let url = SUPABASE_URL + "/rest/v1/pagamentos_pix?select=*&phone=eq." + encodeURIComponent(cliente.phone) + "&order=created_at.asc";
       if (intencao.data_inicio) {
-        // Converte DD/MM/AAAA → AAAA-MM-DD para comparação
-        const [d1,m1,a1] = intencao.data_inicio.split("/");
-        url += "&data_pix=gte." + encodeURIComponent(a1+"-"+m1+"-"+d1);
+        const [d1,m1,a1] = intencao.data_inicio.split("/"); const ano1 = a1.length===2?"20"+a1:a1;
+        url += "&created_at=gte." + encodeURIComponent(ano1+"-"+m1+"-"+d1+"T00:00:00");
       }
       if (intencao.data_fim) {
-        const [d2,m2,a2] = intencao.data_fim.split("/");
-        url += "&data_pix=lte." + encodeURIComponent(a2+"-"+m2+"-"+d2);
+        const [d2,m2,a2] = intencao.data_fim.split("/"); const ano2 = a2.length===2?"20"+a2:a2;
+        url += "&created_at=lte." + encodeURIComponent(ano2+"-"+m2+"-"+d2+"T23:59:59");
       }
       const comprovantes = await (await fetch(url, { headers: SB_H })).json();
 
