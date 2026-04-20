@@ -1298,6 +1298,7 @@ async function processarTexto(texto) {
       ocupado = false; setStatus(false);
 
     } else {
+      document.getElementById("typing").style.display = "none";
       const resp = intencao.resposta || "Não entendi. Pode reformular?";
       addMsg("bot", resp);
       historico.push({ role:"assistant", content:resp });
