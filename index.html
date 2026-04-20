@@ -49,6 +49,9 @@
   #msg-input { flex: 1; background: transparent; border: none; outline: none; color: #E9EDEF; font-size: 15px; padding: 4px 0; font-family: inherit; resize: none; max-height: 120px; overflow-y: auto; line-height: 21px; }
   #msg-input::placeholder { color: #8696A0; }
   #send-btn { width: 48px; height: 48px; border-radius: 50%; background: #00A884; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; color: #fff; user-select: none; -webkit-user-select: none; }
+  #mic-btn { width: 48px; height: 48px; border-radius: 50%; background: #202C33; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; color: #8696A0; user-select: none; -webkit-user-select: none; transition: background .15s, color .15s; }
+  #mic-btn.gravando { background: #c0392b; color: #fff; animation: micPulse .8s infinite; }
+  @keyframes micPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
   .toast-row { display:flex; justify-content:center; margin: 4px 8px 6px; animation: fadeUp .18s ease; }
   .toast-pill { background: rgba(22,101,52,0.35); border: 1.5px solid #16a34a; border-radius: 14px; padding: 9px 16px; color: #4ade80; font-size: 14.5px; font-weight: 500; text-align:center; line-height:1.4; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
   .toast-clicavel { cursor: pointer; transition: background .15s, transform .1s; }
@@ -213,6 +216,7 @@
     <div id="input-wrap">
       <textarea id="msg-input" placeholder="Mensagem" autocomplete="off" rows="1"></textarea>
     </div>
+    <button id="mic-btn" onclick="toggleMic()" aria-label="Microfone">🎤</button>
     <button id="send-btn" class="active" onclick="enviar()" aria-label="Enviar">&#x27A4;</button>
   </div>
 </div>
@@ -1284,6 +1288,7 @@ async function processarTexto(texto) {
       ocupado = false; setStatus(false);
 
     } else {
+      const resp = intencao.resposta || "Não entendi. Pode reformular?";
       addMsg("bot", resp);
       historico.push({ role:"assistant", content:resp });
       ocupado = false; setStatus(false);
@@ -2116,6 +2121,78 @@ function toggleVoz() {
   const btn = document.getElementById("voz-btn");
   if (btn) { btn.textContent = vozAtiva ? "🔊" : "🔇"; btn.style.opacity = vozAtiva ? "1" : "0.4"; }
   if (!vozAtiva) ttsQueue = [];
+}
+
+
+// ── MICROFONE (Speech Recognition) ──────────────────────────────
+let reconhecimento = null;
+let micAtivo = false;
+
+function toggleMic() {
+  if (micAtivo) {
+    pararMic();
+  } else {
+    iniciarMic();
+  }
+}
+
+function iniciarMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    addMsg("bot", "Seu navegador não suporta reconhecimento de voz. Tente pelo Chrome.");
+    return;
+  }
+  reconhecimento = new SR();
+  reconhecimento.lang = "pt-BR";
+  reconhecimento.continuous = true;
+  reconhecimento.interimResults = true;
+
+  const input = document.getElementById("msg-input");
+  const btn   = document.getElementById("mic-btn");
+  let textoBase = input.value; // preserva o que já tinha digitado
+
+  reconhecimento.onstart = () => {
+    micAtivo = true;
+    btn.classList.add("gravando");
+    btn.textContent = "⏹️";
+    if (!textoBase.endsWith(" ") && textoBase.length > 0) textoBase += " ";
+  };
+
+  reconhecimento.onresult = (e) => {
+    let interim = "";
+    let final   = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += t;
+      else interim += t;
+    }
+    if (final) textoBase += final;
+    input.value = textoBase + interim;
+    // Ajusta altura do textarea
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 120) + "px";
+  };
+
+  reconhecimento.onerror = (e) => {
+    if (e.error !== "aborted") pararMic();
+  };
+
+  reconhecimento.onend = () => {
+    pararMic();
+  };
+
+  reconhecimento.start();
+}
+
+function pararMic() {
+  micAtivo = false;
+  const btn = document.getElementById("mic-btn");
+  btn.classList.remove("gravando");
+  btn.textContent = "🎤";
+  if (reconhecimento) {
+    try { reconhecimento.stop(); } catch(e) {}
+    reconhecimento = null;
+  }
 }
 
 </script>
