@@ -2061,6 +2061,7 @@ function limparTTS(t) {
 }
 
 async function buscarAudioGemini(txt) {
+  console.log("[TTS] Buscando áudio para:", txt.slice(0, 40));
   for (let i = 0; i < GEMINI_KEYS.length; i++) {
     const idx  = (ttsKeyIdx + i) % GEMINI_KEYS.length;
     const key  = GEMINI_KEYS[idx];
@@ -2080,19 +2081,24 @@ async function buscarAudioGemini(txt) {
         }
       );
       const json = await res.json();
+      console.log("[TTS] Resposta HTTP:", res.status, "| error:", json?.error?.message || "nenhum");
       const code = json?.error?.code;
       if (code === 429 || code === 401 || code === 403) {
         ttsKeyIdx = (ttsKeyIdx + 1) % GEMINI_KEYS.length; continue;
       }
-      const b64 = (json?.candidates?.[0]?.content?.parts || [])
-                    .find(p => p?.inlineData?.data)?.inlineData?.data;
+      const parts = json?.candidates?.[0]?.content?.parts || [];
+      console.log("[TTS] Parts recebidas:", parts.length, "| tem audio:", parts.some(p => p?.inlineData?.data));
+      const b64 = parts.find(p => p?.inlineData?.data)?.inlineData?.data;
       if (!b64) { ttsKeyIdx = (ttsKeyIdx + 1) % GEMINI_KEYS.length; continue; }
       ttsKeyIdx = idx;
+      console.log("[TTS] Áudio OK, tamanho b64:", b64.length);
       return b64;
     } catch(e) {
+      console.error("[TTS] Erro fetch:", e.message);
       ttsKeyIdx = (ttsKeyIdx + 1) % GEMINI_KEYS.length;
     }
   }
+  console.warn("[TTS] Todas as chaves falharam.");
   return null;
 }
 
@@ -2102,6 +2108,7 @@ function tocarPCM(b64, ctrl) {
     try {
       const bin = atob(b64);
       const ctx = getTTSCtx();
+      console.log("[TTS] AudioContext state:", ctx.state);
       const n   = bin.length / 2;
       const buf = ctx.createBuffer(1, n, 24000);
       const ch  = buf.getChannelData(0);
@@ -2116,7 +2123,11 @@ function tocarPCM(b64, ctrl) {
       src.connect(ctx.destination);
       src.onended = resolve;
       src.start();
-    } catch(e) { resolve(); }
+      console.log("[TTS] Tocando áudio...");
+    } catch(e) {
+      console.error("[TTS] Erro ao tocar:", e.message);
+      resolve();
+    }
   });
 }
 
@@ -2124,18 +2135,16 @@ async function falarTTS(texto) {
   if (!texto) return;
   const limpo = limparTTS(texto);
   if (limpo.length < 2) return;
+  console.log("[TTS] falarTTS chamado:", limpo.slice(0, 60));
 
-  // Cancela fala anterior
   if (ttsAbort) ttsAbort.aborted = true;
   const ctrl = { aborted: false };
   ttsAbort = ctrl;
 
-  // Divide em: 1ª frase (curta) + resto — para começar a tocar mais rápido
   const m = limpo.match(/^([^.!?]{1,80}[.!?]?)\s*([\s\S]*)$/);
   const primeira = m ? m[1].trim() : limpo;
   const resto    = m ? m[2].trim() : "";
 
-  // Busca a 1ª frase e o resto em paralelo
   const [b64a, b64b] = await Promise.all([
     buscarAudioGemini(primeira),
     resto.length > 2 ? buscarAudioGemini(resto) : Promise.resolve(null)
