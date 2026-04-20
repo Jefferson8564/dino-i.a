@@ -228,26 +228,6 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 // ── GEMINI API ──
 const GEMINI_KEYS = __GEMINI_KEYS__;
 let geminiKeyIndex = (() => { try { const s = localStorage.getItem("dino_gemini_key_idx"); return s !== null ? parseInt(s) : 0; } catch(e) { return 0; } })();
-let ttsKeyIndex = 0; // índice independente para TTS — não interfere no chat
-const GEMINI_VOICES = [
-  { id:"Zephyr",       desc:"Brilhante" },
-  { id:"Puck",         desc:"Animada" },
-  { id:"Charon",       desc:"Informativa" },
-  { id:"Kore",         desc:"Firme" },
-  { id:"Fenrir",       desc:"Excitável" },
-  { id:"Aoede",        desc:"Suave" },
-  { id:"Leda",         desc:"Jovial" },
-  { id:"Orus",         desc:"Confiante" },
-  { id:"Dipper",       desc:"Calma · Grave" },
-  { id:"Schedar",      desc:"Segura" },
-  { id:"Gacrux",       desc:"Madura" },
-  { id:"Sulafat",      desc:"Calorosa" },
-  { id:"Vindemiatrix", desc:"Delicada" },
-  { id:"Achernar",     desc:"Suave · Clara" },
-  { id:"Zubenelgenubi",desc:"Casual" },
-  { id:"Pulcherrima",  desc:"Expressiva" },
-];
-let ttsVoice = (() => { try { return localStorage.getItem("dino_tts_voice") || "Kore"; } catch(e) { return "Kore"; } })();
 const GEMINI_MODELS = [
   { id: "gemini-2.5-flash", nome: "2.5 Flash" },
 ];
@@ -1353,9 +1333,10 @@ function atualizarBotoesBarra() {
 
 
 // ── CONFIGURAÇÕES: engrenagem ──
+
 async function previewVoz(voiceId, btn) {
   const orig = btn.innerHTML;
-  btn.innerHTML = '<div style="color:#53BDEB;font-size:12px;">⏳ carregando...</div>';
+  btn.innerHTML = '<div style="color:#53BDEB;font-size:12px;text-align:center;">⏳...</div>';
   const chave = GEMINI_KEYS[ttsKeyIndex];
   try {
     const res = await fetch(
@@ -1364,7 +1345,7 @@ async function previewVoz(voiceId, btn) {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": chave },
         body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: "Olá! Eu sou a voz " + voiceId + ", tudo bem?" }] }],
+          contents: [{ role: "user", parts: [{ text: "Olá! Esta é a voz " + voiceId + "." }] }],
           generationConfig: {
             responseModalities: ["AUDIO"],
             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceId } } }
@@ -1373,48 +1354,40 @@ async function previewVoz(voiceId, btn) {
       }
     );
     const json = await res.json();
-    const parts = json?.candidates?.[0]?.content?.parts || [];
-    const b64 = parts.find(p => p?.inlineData?.data)?.inlineData?.data;
+    const b64 = (json?.candidates?.[0]?.content?.parts || []).find(p => p?.inlineData?.data)?.inlineData?.data;
     btn.innerHTML = orig;
     if (!b64) return;
     const bin = atob(b64);
     const ctx = getAudioCtx();
-    const n   = bin.length / 2;
+    const n = bin.length / 2;
     const buf = ctx.createBuffer(1, n, 24000);
-    const ch  = buf.getChannelData(0);
+    const ch = buf.getChannelData(0);
     for (let i = 0; i < n; i++) {
-      const lo = bin.charCodeAt(i * 2) & 0xFF;
-      const hi = bin.charCodeAt(i * 2 + 1) & 0xFF;
-      let s = (hi << 8) | lo;
-      if (s >= 32768) s -= 65536;
-      ch[i] = s / 32768;
+      const lo = bin.charCodeAt(i*2) & 0xFF, hi = bin.charCodeAt(i*2+1) & 0xFF;
+      let s = (hi<<8)|lo; if (s>=32768) s-=65536; ch[i]=s/32768;
     }
     const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(ctx.destination);
-    src.start();
-  } catch(e) {
-    btn.innerHTML = orig;
-  }
+    src.buffer = buf; src.connect(ctx.destination); src.start();
+  } catch(e) { btn.innerHTML = orig; }
 }
 
 function renderVozGrid() {
   const grid = document.getElementById("voz-grid");
   if (!grid) return;
   grid.innerHTML = "";
-  for (const v of GEMINI_VOICES) {
-    const btn = document.createElement("div");
+  GEMINI_VOICES.forEach((v, idx) => {
     const ativo = v.id === ttsVoice;
-    btn.style.cssText = "background:#1E2D36;border:1.5px solid " + (ativo?"#25D366":"#2A3942") + ";border-radius:10px;padding:9px 10px;cursor:pointer;user-select:none;transition:all .15s;";
-    btn.innerHTML = '<div style="color:' + (ativo?"#25D366":"#E9EDEF") + ';font-size:13px;font-weight:' + (ativo?"700":"400") + ';">' + v.id + ' 🔊</div><div style="color:#8696A0;font-size:11px;">' + v.desc + '</div>';
+    const btn = document.createElement("div");
+    btn.style.cssText = "background:#1E2D36;border:1.5px solid "+(ativo?"#25D366":"#2A3942")+";border-radius:10px;padding:9px 10px;cursor:pointer;user-select:none;-webkit-user-select:none;transition:all .15s;";
+    btn.innerHTML = '<div style="color:'+(ativo?"#25D366":"#E9EDEF")+';font-size:13px;font-weight:'+(ativo?"700":"400")+';">'+v.id+' 🔊</div><div style="color:#8696A0;font-size:11px;">'+v.desc+'</div>';
     btn.onclick = () => {
       ttsVoice = v.id;
       try { localStorage.setItem("dino_tts_voice", v.id); } catch(e) {}
       renderVozGrid();
-      previewVoz(v.id, document.querySelector("#voz-grid div:nth-child(" + (GEMINI_VOICES.indexOf(v)+1) + ")"));
+      previewVoz(v.id, document.querySelectorAll("#voz-grid > div")[idx]);
     };
     grid.appendChild(btn);
-  }
+  });
 }
 
 function renderKeyGrid() {
@@ -2130,8 +2103,21 @@ function fecharPedidoFora(e) {
 }
 
 // ── TTS GEMINI ──────────────────────────────────────────────────
-let vozAtiva = true;
-let audioCtx = null;
+const GEMINI_VOICES = [
+  { id:"Zephyr",    desc:"Brilhante" },   { id:"Puck",    desc:"Animada" },
+  { id:"Charon",    desc:"Informativa" },  { id:"Kore",    desc:"Firme" },
+  { id:"Fenrir",    desc:"Excitável" },    { id:"Aoede",   desc:"Suave" },
+  { id:"Leda",      desc:"Jovial" },       { id:"Orus",    desc:"Confiante" },
+  { id:"Dipper",    desc:"Calma · Grave"}, { id:"Schedar", desc:"Segura" },
+  { id:"Gacrux",    desc:"Madura" },       { id:"Sulafat", desc:"Calorosa" },
+  { id:"Vindemiatrix",desc:"Delicada" },   { id:"Achernar",desc:"Clara" },
+  { id:"Zubenelgenubi",desc:"Casual" },    { id:"Pulcherrima",desc:"Expressiva" },
+];
+let ttsKeyIndex  = 0;
+let ttsVoice     = (() => { try { return localStorage.getItem("dino_tts_voice") || "Kore"; } catch(e) { return "Kore"; } })();
+let vozAtiva     = true;
+let ttsAtual     = null; // AbortController da fala em curso
+let audioCtx     = null;
 
 function getAudioCtx() {
   if (!audioCtx || audioCtx.state === "closed")
@@ -2143,49 +2129,55 @@ function getAudioCtx() {
 function limparParaFala(texto) {
   return texto
     .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FEFF}]/gu, "")
-    .replace(/[➖─━]/g, "")
+    .replace(/[➖─━─-]/g, "")
     .replace(/\*+([^*]*)\*+/g, "$1")
     .replace(/https?:\/\/\S+/g, "")
-    .replace(/[\n\r]+/g, ". ")
+    .replace(/[\n\r]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 
-
 async function falarTexto(texto) {
   if (!vozAtiva || !texto) return;
   const limpo = limparParaFala(texto);
-  if (!limpo || limpo.length < 3) return;
+  if (!limpo || limpo.length < 2) return;
 
-  const frases = (limpo.match(/[^.!?]+[.!?]*/g) || [limpo]).map(f => f.trim()).filter(f => f.length >= 3);
+  // Cancela qualquer fala anterior
+  if (ttsAtual) { ttsAtual.aborted = true; }
+  const ctrl = { aborted: false };
+  ttsAtual = ctrl;
 
-  // Função que busca o áudio de uma frase via Gemini TTS
-  async function fetchAudio(frase) {
+  // Envia o texto inteiro de uma vez (sem quebrar em frases — menos delay)
+  async function buscarAudio(txt) {
     for (let i = 0; i < GEMINI_KEYS.length; i++) {
-      const idx = (ttsKeyIndex + i) % GEMINI_KEYS.length;
-      const chave = GEMINI_KEYS[idx];
+      if (ctrl.aborted) return null;
+      const idx  = (ttsKeyIndex + i) % GEMINI_KEYS.length;
+      const key  = GEMINI_KEYS[idx];
       try {
         const res = await fetch(
           "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",
           {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-goog-api-key": chave },
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: [{ text: frase }] }],
+            method : "POST",
+            headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+            body   : JSON.stringify({
+              contents       : [{ role: "user", parts: [{ text: txt }] }],
               generationConfig: {
                 responseModalities: ["AUDIO"],
-                speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: ttsVoice } } }
+                speechConfig: {
+                  voiceConfig: { prebuiltVoiceConfig: { voiceName: ttsVoice } }
+                }
               }
             })
           }
         );
         const json = await res.json();
-        if (json?.error?.code === 429 || json?.error?.code === 401 || json?.error?.code === 403) {
-          ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length;
-          continue;
+        const code = json?.error?.code;
+        if (code === 429 || code === 401 || code === 403) {
+          ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length; continue;
         }
-        const b64 = (json?.candidates?.[0]?.content?.parts || []).find(p => p?.inlineData?.data)?.inlineData?.data;
+        const b64 = (json?.candidates?.[0]?.content?.parts || [])
+                      .find(p => p?.inlineData?.data)?.inlineData?.data;
         if (!b64) { ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length; continue; }
         ttsKeyIndex = idx;
         return b64;
@@ -2196,9 +2188,9 @@ async function falarTexto(texto) {
     return null;
   }
 
-  // Função que decodifica e toca PCM via AudioContext
-  async function tocarB64(b64) {
+  function tocarPCM(b64) {
     return new Promise(resolve => {
+      if (ctrl.aborted) return resolve();
       try {
         const bin = atob(b64);
         const ctx = getAudioCtx();
@@ -2206,9 +2198,9 @@ async function falarTexto(texto) {
         const buf = ctx.createBuffer(1, n, 24000);
         const ch  = buf.getChannelData(0);
         for (let j = 0; j < n; j++) {
-          const lo = bin.charCodeAt(j * 2) & 0xFF;
+          const lo = bin.charCodeAt(j * 2)     & 0xFF;
           const hi = bin.charCodeAt(j * 2 + 1) & 0xFF;
-          let s = (hi << 8) | lo;
+          let s    = (hi << 8) | lo;
           if (s >= 32768) s -= 65536;
           ch[j] = s / 32768;
         }
@@ -2221,15 +2213,8 @@ async function falarTexto(texto) {
     });
   }
 
-  // Pipeline: busca a próxima frase ENQUANTO toca a atual
-  let proximoPromise = fetchAudio(frases[0]);
-  for (let i = 0; i < frases.length; i++) {
-    if (!vozAtiva) break;
-    const b64 = await proximoPromise;
-    // Já começa a buscar a próxima em paralelo
-    if (i + 1 < frases.length) proximoPromise = fetchAudio(frases[i + 1]);
-    if (b64) await tocarB64(b64);
-  }
+  const b64 = await buscarAudio(limpo);
+  if (b64 && !ctrl.aborted) await tocarPCM(b64);
 }
 
 function toggleVoz() {
