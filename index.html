@@ -678,7 +678,7 @@ async function detectarIntencao(texto) {
 
   // ── Saudações e respostas genéricas → responde localmente sem chamar a IA ──
   const t0 = normStr(texto);
-  const saudacoes = /^(oi+|ola+|ol[aá]|hey|e a[ií]|ta a[ií]|ta ai|ta aqui|tudo bem|tudo bom|bom dia|boa tarde|boa noite|ok|certo|blz|beleza|valeu|obrigad[oa]|otimo|perfeito|entendi|sim|nao|nao entendi|teste|test)\.?!?$/;
+  const saudacoes = /^(oi+|ola+|ol[aá]|hey|e a[ií]|ta a[ií]|ta ai|ta aqui|vc ta ai|vc esta ai|vc esta aqui|voce esta ai|voce ta ai|esta ai|tudo bem|tudo bom|bom dia|boa tarde|boa noite|ok|certo|blz|beleza|valeu|obrigad[oa]|otimo|perfeito|entendi|sim|nao|nao entendi|teste|test|funcionando|funciona)\.?!?$/;
   if (saudacoes.test(t0)) {
     const respostas = ["Olá! Como posso ajudar?","Oi! O que precisa?","Estou aqui.","Pode falar.","Oi!","Olá!"];
     return { acao:"outro", resposta: respostas[Math.floor(Math.random() * respostas.length)] };
@@ -705,14 +705,23 @@ Erros de digitação: "duvida"="divida", "clente"="cliente", "creditu"="credito"
     const resultado = await geminiRequest(system, [{ role:"user", content:texto }]);
     if (resultado.erro) return { acao:"outro", resposta: resultado.erro };
 
-    const raw = resultado.texto;
+    const raw = resultado.texto.trim();
     const match = raw.match(/\{[\s\S]*\}/);
     if (match) {
-      const parsed = JSON.parse(match[0]);
-      if (parsed.cliente && parsed.cliente.length > 40) {
-        return { acao:"outro", resposta:"Nao entendi. Pode informar o nome do cliente?" };
+      try {
+        const parsed = JSON.parse(match[0]);
+        if (parsed.cliente && parsed.cliente.length > 40) {
+          return { acao:"outro", resposta:"Nao entendi. Pode informar o nome do cliente?" };
+        }
+        return parsed;
+      } catch(e) {
+        // JSON malformado — usa texto bruto como resposta
+        return { acao:"outro", resposta: raw.replace(/[{}]/g,"").trim() || "Nao entendi." };
       }
-      return parsed;
+    }
+    // Gemini respondeu mas sem JSON — usa o texto diretamente
+    if (raw.length > 0 && raw.length < 400) {
+      return { acao:"outro", resposta: raw };
     }
   } catch(e) {}
   return { acao:"outro", resposta:"Nao consegui processar. Tente novamente." };
@@ -2187,6 +2196,9 @@ function iniciarMic() {
 
   reconhecimento.onend = () => {
     pararMic();
+    // Envia automaticamente ao parar
+    const val = document.getElementById("msg-input").value.trim();
+    if (val) enviar();
   };
 
   reconhecimento.start();
