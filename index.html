@@ -247,7 +247,7 @@ const GEMINI_VOICES = [
   { id:"Zubenelgenubi",desc:"Casual" },
   { id:"Pulcherrima",  desc:"Expressiva" },
 ];
-let ttsVoice = (() => { try { return localStorage.getItem("dino_tts_voice") || "Dipper"; } catch(e) { return "Dipper"; } })();
+let ttsVoice = (() => { try { return localStorage.getItem("dino_tts_voice") || "Kore"; } catch(e) { return "Kore"; } })();
 const GEMINI_MODELS = [
   { id: "gemini-2.5-flash", nome: "2.5 Flash" },
 ];
@@ -2121,8 +2121,8 @@ async function processarFilaTTS() {
           headers: { "Content-Type": "application/json", "x-goog-api-key": chave },
           body: JSON.stringify({
             contents: [{ role: "user", parts: [{ text: texto }] }],
-            responseModalities: ["text", "audio"],
             generationConfig: {
+              responseModalities: ["AUDIO"],
               speechConfig: {
                 voiceConfig: {
                   prebuiltVoiceConfig: { voiceName: ttsVoice }
@@ -2138,9 +2138,9 @@ async function processarFilaTTS() {
         ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length;
         continue;
       }
-      // Procura a parte de áudio na resposta (pode vir em qualquer posição)
       const parts = json?.candidates?.[0]?.content?.parts || [];
-      const audioPart = parts.find(p => p?.inlineData?.mimeType?.startsWith("audio"));
+      const audioPart = parts.find(p => p?.inlineData?.mimeType?.startsWith("audio"))
+                     || parts.find(p => p?.inlineData?.data);
       const b64 = audioPart?.inlineData?.data;
       if (!b64) { ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length; continue; }
 
@@ -2166,7 +2166,6 @@ async function processarFilaTTS() {
       ttsKeyIndex = (ttsKeyIndex + 1) % GEMINI_KEYS.length;
     }
   }
-  // Todas as chaves falharam — segue fila silenciosamente
   ttsRodando = false;
   processarFilaTTS();
 }
