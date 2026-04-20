@@ -437,7 +437,7 @@ function encontrarCliente(clientes, nome) {
 }
 
 // ── PAGAMENTO (identico ao ADM) ──
-async function executarPagamento(phone, val) {
+async function executarPagamento(phone, val, pixDados) {
   const dados = await sbGet("clientes", { phone });
   const c = Array.isArray(dados) ? dados[0] : null;
   if (!c) throw new Error("Cliente nao encontrado.");
@@ -460,6 +460,20 @@ async function executarPagamento(phone, val) {
     diamantes:       (Number(c.diamantes||0)) + novDi,
     total_acumulado: sobra,
   });
+
+  // Se veio de um link PIX, registra em pagamentos_pix para evitar duplicata
+  if (pixDados && pixDados.data && pixDados.hora) {
+    const destino = 'Jefferson Leandro (via picpay)';
+    await sbInsert("pagamentos_pix", {
+      phone,
+      valor:         val,
+      data_pix:      pixDados.data,
+      hora_pix:      pixDados.hora,
+      destino,
+      remetente_pix: pixDados.nomeUrl || "",
+      adm:           true
+    });
+  }
 
   const dh = dataHoraSP();
   const saldoTexto = novoSaldo > 0
@@ -548,7 +562,7 @@ async function confirmarPendente() {
     return;
   }
 
-  const { cliente, valor, zerarCredito } = pendente;
+  const { cliente, valor, zerarCredito, pixDados } = pendente;
   pendente = null;
   setStatus(true);
   document.getElementById("typing").style.display = "flex";
@@ -561,7 +575,7 @@ async function confirmarPendente() {
       addToast("✅ Crédito zerado ♻️");
       historico.push({ role:"assistant", content:"Crédito zerado." });
     } else {
-      const res = await executarPagamento(cliente.phone, valor);
+      const res = await executarPagamento(cliente.phone, valor, pixDados);
       document.getElementById("typing").style.display = "none";
       addToast("♻️ comprovante", { phone: cliente.phone, nome: res.nome, valor, novoSaldo: res.novoSaldo, novTk: res.novTk, novDi: res.novDi });
       historico.push({ role:"assistant", content: "✅ " + res.nome });
@@ -1417,14 +1431,14 @@ function lerPixDaURL() {
   if (!search) return null;
   const raw = search.substring(1);
   const partes = raw.split('=');
-  if (partes.length < 5) return null;
-  const valorRaw     = partes[0];
-  const data         = partes[1];
-  const hora         = partes[2];
-  // Une todas as partes restantes como nome (suporte a nomes com múltiplas palavras)
-  const nomeCompleto = partes.slice(3).join(' ').trim();
+  if (partes.length !== 5) return null;
+  const valorRaw  = partes[0];
+  const data      = partes[1];
+  const hora      = partes[2];
+  const nome      = partes[3];
+  const sobrenome = partes[4];
   if (valorRaw.includes('R$')) return null;
-  if (!nomeCompleto) return null;
+  if (!nome.trim() || !sobrenome.trim()) return null;
   const valorNum = parseFloat(valorRaw.replace(/\./g,'').replace(',','.'));
   if (isNaN(valorNum) || valorNum <= 0) return null;
   return {
@@ -1432,7 +1446,7 @@ function lerPixDaURL() {
     valorFmt: 'R$ ' + valorNum.toFixed(2).replace('.',','),
     data,
     hora,
-    remetente: nomeCompleto
+    remetente: nome + ' ' + sobrenome
   };
 }
 
@@ -1479,67 +1493,12 @@ async function diagnosticar() {
   }
 }
 
-// ── AUTO-PROCESSAR PIX DA URL ──────────────────────────────────
-async function processarPixAuto(pix) {
-  ocupado = true;
-  setStatus(true);
-  document.getElementById("typing").style.display = "flex";
-  rolar();
-  try {
-    const clientes = await carregarClientes();
-    document.getElementById("typing").style.display = "none";
-    const resultado = encontrarCliente(clientes, pix.remetente);
-
-    if (!resultado) {
-      const resp = "Não encontrei \"" + pix.remetente + "\" na lista. Qual é o nome do cliente?";
-      addMsg("bot", resp);
-      historico.push({ role:"assistant", content: resp });
-      pendenteSug = { acao:"pagamento_pix", sugestoes:[], valor:pix.valor, data:pix.data, hora:pix.hora, nomeUrl:pix.remetente };
-      ocupado = false; setStatus(false);
-      return;
-    }
-
-    if (resultado.exato) {
-      const c = resultado.cliente;
-      const debtAtual = Number(c.debt||0);
-      const novoSaldo = debtAtual - pix.valor;
-      const saldoDepois = novoSaldo > 0
-        ? "Saldo após: R$ " + novoSaldo.toFixed(2).replace('.',',')
-        : novoSaldo < 0
-          ? "Crédito após: R$ " + Math.abs(novoSaldo).toFixed(2).replace('.',',')
-          : "Conta quitada";
-      pendente = { cliente:c, valor:pix.valor, pixDados:{ data:pix.data, hora:pix.hora, nomeUrl:pix.remetente } };
-      const msg = "Registrar para " + c.name + "?\n\nDébito atual: R$ " + debtAtual.toFixed(2).replace('.',',') + "\n" + saldoDepois;
-      addMsg("bot", msg, true);
-      historico.push({ role:"assistant", content: msg });
-      ocupado = true;
-      setStatus(false);
-      return;
-    }
-
-    // Fuzzy — mostra sugestões
-    const lista = resultado.sugestoes.map((s,i) => (i+1) + ". " + s.name).join("\n");
-    const resp = "Não achei \"" + pix.remetente + "\" exato. Quem você quis dizer?\n\n" + lista + "\n\nResponda com o número ou outro nome.";
-    addMsg("bot", resp);
-    historico.push({ role:"assistant", content: resp });
-    pendenteSug = { acao:"pagamento_pix", sugestoes:resultado.sugestoes, valor:pix.valor, data:pix.data, hora:pix.hora, nomeUrl:pix.remetente };
-    ocupado = false; setStatus(false);
-  } catch(e) {
-    document.getElementById("typing").style.display = "none";
-    addMsg("bot", "Erro ao processar PIX: " + e.message);
-    ocupado = false; setStatus(false);
-  }
-}
-
-setTimeout(async () => {
+setTimeout(() => {
   const restaurado = carregarLocal();
 
   // Verifica se chegou um PIX via URL
   const pix = lerPixDaURL();
   if (pix) {
-    // Limpa a URL imediatamente para evitar card duplicado ao recarregar
-    history.replaceState({}, document.title, window.location.pathname);
-
     const msg =
       "💸 *PIX RECEBIDO*\n" +
       "──────────────────\n" +
@@ -1548,12 +1507,13 @@ setTimeout(async () => {
       "📅 Data: " + pix.data + "\n" +
       "🕐 Hora: " + pix.hora + "\n" +
       "──────────────────\n" +
-      "Buscando cliente...";
+      "Deseja registrar o pagamento?";
     addMsg("bot", msg);
     historico.push({ role:"assistant", content: msg });
 
-    // Busca o cliente automaticamente (sem precisar digitar nada)
-    await processarPixAuto(pix);
+    // Pré-preenche o input para facilitar o registro
+    const input = document.getElementById("msg-input");
+    if (input) input.value = pix.remetente + " pagou " + pix.valorFmt;
   } else if (!restaurado) {
     addMsg("bot", "Ola! Sou o 𝕕𝕚𝕟𝕠 𝕚.𝕒.\n\nExemplos:\n- Jefferson pagou 50\n- Maria pagou\n- Lanca 25 do Joao\n- Comprovantes do Jefferson\n- Comprovantes da Maria de 01/04/2026 ate 17/04/2026");
   }
