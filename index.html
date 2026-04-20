@@ -633,10 +633,28 @@ function detectarPorRegex(texto) {
   // ── COMPROVANTE(S) ──
   if (/comprovante[s]?|historico\s+de\s+pagamento[s]?/.test(t)) {
     const nome = extrairNome(t);
-    const datas = [...texto.matchAll(/(\d{2}\/\d{2}\/\d{4})/g)].map(m => m[1]);
     const obj = { acao:"comprovantes", cliente: nome };
+    // Tenta datas explícitas DD/MM/AAAA
+    const datas = [...texto.matchAll(/(\d{2}\/\d{2}\/\d{4})/g)].map(m => m[1]);
     if (datas[0]) obj.data_inicio = datas[0];
     if (datas[1]) obj.data_fim    = datas[1];
+    // Tenta "últimos X dias/semanas/meses"
+    if (!datas.length) {
+      const mDias = t.match(/[uú]ltimos?\s+(\d+)\s*(dia[s]?|semana[s]?|m[eê]s|meses)/);
+      if (mDias) {
+        const qtd  = parseInt(mDias[1]);
+        const tipo = mDias[2];
+        let dias = qtd;
+        if (/semana/.test(tipo)) dias = qtd * 7;
+        if (/m[eê]s|meses/.test(tipo)) dias = qtd * 30;
+        const hoje = new Date();
+        const inicio = new Date(hoje);
+        inicio.setDate(hoje.getDate() - dias);
+        const fmt = d => d.toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric" });
+        obj.data_inicio = fmt(inicio);
+        obj.data_fim    = fmt(hoje);
+      }
+    }
     return obj;
   }
 
@@ -2092,31 +2110,23 @@ function iniciarMic() {
   }
   reconhecimento = new SR();
   reconhecimento.lang = "pt-BR";
-  reconhecimento.continuous = true;
-  reconhecimento.interimResults = true;
+  reconhecimento.continuous = false;
+  reconhecimento.interimResults = false;
 
   const input = document.getElementById("msg-input");
   const btn   = document.getElementById("mic-btn");
-  let textoBase = input.value; // preserva o que já tinha digitado
 
   reconhecimento.onstart = () => {
     micAtivo = true;
     btn.classList.add("gravando");
     btn.textContent = "⏹️";
-    if (!textoBase.endsWith(" ") && textoBase.length > 0) textoBase += " ";
+    input.value = "";
+    input.placeholder = "Ouvindo...";
   };
 
   reconhecimento.onresult = (e) => {
-    let interim = "";
-    let final   = "";
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const t = e.results[i][0].transcript;
-      if (e.results[i].isFinal) final += t;
-      else interim += t;
-    }
-    if (final) textoBase += final;
-    input.value = textoBase + interim;
-    // Ajusta altura do textarea
+    const texto = e.results[0][0].transcript;
+    input.value = texto;
     input.style.height = "auto";
     input.style.height = Math.min(input.scrollHeight, 120) + "px";
   };
@@ -2126,8 +2136,8 @@ function iniciarMic() {
   };
 
   reconhecimento.onend = () => {
+    input.placeholder = "Mensagem";
     pararMic();
-    // Envia automaticamente ao parar
     const val = document.getElementById("msg-input").value.trim();
     if (val) enviar();
   };
