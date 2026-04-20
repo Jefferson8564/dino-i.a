@@ -2071,7 +2071,6 @@ async function processarFilaTTS() {
   ttsRodando = true;
   const texto = ttsQueue.shift();
 
-  // ── Tenta Gemini TTS com formato correto ──
   for (let tentativa = 0; tentativa < GEMINI_KEYS.length; tentativa++) {
     const chave = GEMINI_KEYS[geminiKeyIndex];
     try {
@@ -2082,7 +2081,7 @@ async function processarFilaTTS() {
           headers: { "Content-Type": "application/json", "x-goog-api-key": chave },
           body: JSON.stringify({
             contents: [{ role: "user", parts: [{ text: texto }] }],
-            responseModalities: ["audio"],
+            responseModalities: ["text", "audio"],
             generationConfig: {
               speechConfig: {
                 voiceConfig: {
@@ -2093,20 +2092,18 @@ async function processarFilaTTS() {
           })
         }
       );
-      if (!res.ok) {
-        geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length;
-        continue;
-      }
       const json = await res.json();
-      const errCode = json?.error?.code;
+      const errCode = json?.error?.code || (res.ok ? 0 : res.status);
       if (errCode === 429 || errCode === 401 || errCode === 403) {
         geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length;
         continue;
       }
-      const b64 = json?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      // Procura a parte de áudio na resposta (pode vir em qualquer posição)
+      const parts = json?.candidates?.[0]?.content?.parts || [];
+      const audioPart = parts.find(p => p?.inlineData?.mimeType?.startsWith("audio"));
+      const b64 = audioPart?.inlineData?.data;
       if (!b64) { geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length; continue; }
 
-      // Decodifica PCM 16-bit e toca via AudioContext
       const bin = atob(b64);
       const ctx = getAudioCtx();
       const n   = bin.length / 2;
@@ -2124,36 +2121,14 @@ async function processarFilaTTS() {
       src.connect(ctx.destination);
       src.onended = () => { ttsRodando = false; processarFilaTTS(); };
       src.start();
-      return; // sucesso — Dipper falou!
+      return;
     } catch(e) {
       geminiKeyIndex = (geminiKeyIndex + 1) % GEMINI_KEYS.length;
     }
   }
-
-  // ── Fallback: Web Speech API com voz grave ──
-  if (!window.speechSynthesis) { ttsRodando = false; processarFilaTTS(); return; }
-  const falar = () => {
-    const voices = window.speechSynthesis.getVoices();
-    const voz = voices.find(v => v.lang === "pt-BR" && /male|masc/i.test(v.name))
-             || voices.find(v => v.lang.startsWith("pt") && /male|masc/i.test(v.name))
-             || voices.find(v => v.lang === "pt-BR")
-             || voices.find(v => v.lang.startsWith("pt"))
-             || null;
-    const utt = new SpeechSynthesisUtterance(texto);
-    utt.lang  = "pt-BR";
-    utt.rate  = 0.95;
-    utt.pitch = 0.7;
-    if (voz) utt.voice = voz;
-    utt.onend  = () => { ttsRodando = false; processarFilaTTS(); };
-    utt.onerror = () => { ttsRodando = false; processarFilaTTS(); };
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utt);
-  };
-  if (window.speechSynthesis.getVoices().length > 0) {
-    falar();
-  } else {
-    window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.onvoiceschanged = null; falar(); };
-  }
+  // Todas as chaves falharam — segue fila silenciosamente
+  ttsRodando = false;
+  processarFilaTTS();
 }
 
 function falarTexto(texto) {
