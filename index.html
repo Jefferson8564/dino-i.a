@@ -454,6 +454,28 @@ async function executarPagamento(phone, val, pixDados) {
   const sobra  = vTk > 0 ? acum % vTk : acum;
   const novDi  = vDi > 0 ? Math.floor(val / vDi) : 0;
 
+  // 1. INSERT em pagamentos_pix PRIMEIRO (igual pix.html — previne duplicata)
+  if (pixDados && pixDados.data && pixDados.hora) {
+    const insertResp = await fetch(SUPABASE_URL + "/rest/v1/pagamentos_pix", {
+      method: "POST",
+      headers: { ...SB_H, Prefer: "return=representation" },
+      body: JSON.stringify({
+        phone:         phone,
+        valor:         val,
+        data_pix:      pixDados.data,
+        hora_pix:      pixDados.hora.substring(0, 5),
+        destino:       "Jefferson Leandro (via picpay)",
+        remetente_pix: pixDados.nomeUrl || "",
+        adm:           true
+      })
+    });
+    if (!insertResp.ok) {
+      const errBody = await insertResp.text();
+      throw new Error("Erro ao registrar PIX: " + errBody);
+    }
+  }
+
+  // 2. Atualiza debt + fidelidade do cliente
   await sbUpdate("clientes", { phone }, {
     debt:            novoSaldo,
     tickets:         (Number(c.tickets||0))   + novTk,
@@ -467,19 +489,6 @@ async function executarPagamento(phone, val, pixDados) {
     : novoSaldo < 0
       ? "Credito a favor: R$ " + Math.abs(novoSaldo).toFixed(2).replace(".",",")
       : "Quitado";
-
-  // Registra em pagamentos_pix igual o pix.html (previne duplicata pelo cliente)
-  if (pixDados && pixDados.data && pixDados.hora) {
-    await sbInsert("pagamentos_pix", {
-      phone:         phone,
-      valor:         val,
-      data_pix:      pixDados.data,
-      hora_pix:      pixDados.hora,
-      destino:       "Jefferson Leandro (via picpay)",
-      remetente_pix: pixDados.nomeUrl || "",
-      adm:           true
-    });
-  }
 
   const miolo = "──────────────────\nCliente: " + c.name + "\nData/Hora: " + dh + "\nValor pago: R$ " + val.toFixed(2).replace(".",",") + "\n" + saldoTexto + "\n──────────────────";
   await sbInsert("notificacoes", { customer_phone:phone, tipo:"pagamento", valor:val, comprovante:miolo });
