@@ -217,7 +217,7 @@
       <textarea id="msg-input" placeholder="Mensagem" autocomplete="off" rows="1"></textarea>
     </div>
     <button id="mic-btn" onclick="toggleMic()" aria-label="Microfone">🎤</button>
-    <button id="send-btn" class="active" onclick="enviar()" aria-label="Enviar">&#x27A4;</button>
+    <button id="send-btn" class="active" onclick="enviar()" aria-label="Enviar" style="display:none;">&#x27A4;</button>
   </div>
 </div>
 <script>
@@ -732,6 +732,7 @@ async function enviar() {
   if (!texto) return;
   input.value = "";
   input.style.height = "auto";
+  atualizarBotoesBarra();
   addMsg("user", texto);
   historico.push({ role:"user", content:texto });
   await processarTexto(texto);
@@ -1308,7 +1309,14 @@ document.getElementById("msg-input").addEventListener("keydown", function(e) {
 document.getElementById("msg-input").addEventListener("input", function() {
   this.style.height = "auto";
   this.style.height = Math.min(this.scrollHeight, 120) + "px";
+  atualizarBotoesBarra();
 });
+
+function atualizarBotoesBarra() {
+  const temTexto = document.getElementById("msg-input").value.trim().length > 0;
+  document.getElementById("send-btn").style.display = temTexto ? "flex" : "none";
+  document.getElementById("mic-btn").style.display  = temTexto ? "none"  : "flex";
+}
 
 
 
@@ -2193,6 +2201,7 @@ function pararMic() {
     try { reconhecimento.stop(); } catch(e) {}
     reconhecimento = null;
   }
+  atualizarBotoesBarra();
 }
 
 </script>
