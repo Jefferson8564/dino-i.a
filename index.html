@@ -2174,7 +2174,12 @@ function falarTexto(texto) {
   if (!vozAtiva) return;
   const limpo = limparParaFala(texto);
   if (!limpo || limpo.length < 3) return;
-  ttsQueue.push(limpo);
+  // Divide em frases curtas — começa a tocar a 1ª enquanto gera as demais
+  const frases = limpo.match(/[^.!?]+[.!?]*/g) || [limpo];
+  for (const f of frases) {
+    const t = f.trim();
+    if (t.length >= 3) ttsQueue.push(t);
+  }
   processarFilaTTS();
 }
 
