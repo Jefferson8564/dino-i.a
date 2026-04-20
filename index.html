@@ -1530,13 +1530,10 @@ setTimeout(() => {
       "📅 Data: " + pix.data + "\n" +
       "🕐 Hora: " + pix.hora + "\n" +
       "──────────────────\n" +
-      "Deseja registrar o pagamento?";
+      "Quem é o cliente?";
     addMsg("bot", msg);
     historico.push({ role:"assistant", content: msg });
-
-    // Pré-preenche o input para facilitar o registro
-    const input = document.getElementById("msg-input");
-    if (input) input.value = pix.remetente + " pagou " + pix.valorFmt;
+    pendenteSug = { acao:"pagamento_pix", sugestoes:[], valor:pix.valor, data:pix.data, hora:pix.hora, nomeUrl:pix.remetente };
   } else if (!restaurado) {
     addMsg("bot", "Ola! Sou o 𝕕𝕚𝕟𝕠 𝕚.𝕒.\n\nExemplos:\n- Jefferson pagou 50\n- Maria pagou\n- Lanca 25 do Joao\n- Comprovantes do Jefferson\n- Comprovantes da Maria de 01/04/2026 ate 17/04/2026");
   }
