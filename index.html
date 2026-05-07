@@ -149,9 +149,11 @@
   .pw-cat-nome { font-size:15px; font-weight:700; margin-bottom:2px; }
   .pw-cat-desc { font-size:12px; color:#8696A0; }
   .pw-cat-arrow { font-size:22px; color:#2A3942; flex-shrink:0; }
-  .pw-bloco { background:#1E2D36; border-radius:12px; padding:14px; margin-bottom:12px; }
-  .pw-bloco-titulo { font-size:13px; font-weight:700; color:#E9EDEF; margin-bottom:8px; }
-  .pw-linha { margin-bottom:6px; }
+  .pw-bloco { background:#1E2D36; border-radius:14px; padding:16px; margin-bottom:12px; }
+  .pw-bloco-titulo { font-size:14px; font-weight:700; color:#E9EDEF; margin-bottom:10px; }
+  .pw-exemplos { color:#8696A0; font-size:14px; line-height:1.8; margin-bottom:0; }
+  .pw-filtros { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+  .pw-tag { background:#0d2533; border:1.5px solid #53BDEB; border-radius:8px; padding:5px 11px; color:#53BDEB; font-size:13px; font-weight:600; font-family:monospace; }
   .pw-label { color:#E9EDEF; font-weight:600; }
   .pw-hl { color:#53BDEB; }
 </style>
@@ -698,13 +700,13 @@ function detectarPorRegex(texto) {
     if (datas.length === 1) return { inicio: toISO(datas[0])+"T00:00:00", fim: toISO(datas[0])+"T23:59:59" };
     const spNow = () => new Date(new Date().toLocaleString("en-US",{timeZone:"America/Sao_Paulo"}));
     const isoFmt = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-    if (/\bhoje\b/.test(str)) { const d=spNow(); const s=isoFmt(d); return {inicio:s+"T00:00:00",fim:s+"T23:59:59"}; }
-    if (/\bontem\b/.test(str)) { const d=spNow(); d.setDate(d.getDate()-1); const s=isoFmt(d); return {inicio:s+"T00:00:00",fim:s+"T23:59:59"}; }
+    if (/\bhoje\b/.test(str)) { const d=spNow(); const s=isoFmt(d); return {inicio:s+"T00:00:00-03:00",fim:s+"T23:59:59-03:00"}; }
+    if (/\bontem\b/.test(str)) { const d=spNow(); d.setDate(d.getDate()-1); const s=isoFmt(d); return {inicio:s+"T00:00:00-03:00",fim:s+"T23:59:59-03:00"}; }
     if (/\b(essa|esta)\s+semana\b/.test(str)) {
       const d=spNow(); const dow=d.getDay();
       const ini=new Date(d); ini.setDate(d.getDate()-dow);
       const fim=new Date(d); fim.setDate(d.getDate()+(6-dow));
-      return {inicio:isoFmt(ini)+"T00:00:00",fim:isoFmt(fim)+"T23:59:59"};
+      return {inicio:isoFmt(ini)+"T00:00:00-03:00",fim:isoFmt(fim)+"T23:59:59-03:00"};
     }
     const mDias = str.match(/[uú]ltimos?\s+(\d+)\s*(dia[s]?|semana[s]?|m[eê]s|meses)/);
     if (mDias) {
@@ -712,7 +714,7 @@ function detectarPorRegex(texto) {
       if (/semana/.test(mDias[2])) dias*=7;
       if (/m[eê]s|meses/.test(mDias[2])) dias*=30;
       const hoje=spNow(); const ini=new Date(hoje); ini.setDate(hoje.getDate()-dias);
-      return {inicio:isoFmt(ini)+"T00:00:00",fim:isoFmt(hoje)+"T23:59:59"};
+      return {inicio:isoFmt(ini)+"T00:00:00-03:00",fim:isoFmt(hoje)+"T23:59:59-03:00"};
     }
     return null;
   }
@@ -1348,7 +1350,7 @@ async function processarTexto(texto) {
         const resp = "Nao achei \"" + nomeQuery + "\" exato. Voce quis dizer?\n\n" + lista + "\n\nResponda com o nome ou numero.";
         addMsg("bot", resp);
         historico.push({ role:"assistant", content:resp });
-        pendenteSug = { acao: intencao.acao, sugestoes: resultado.sugestoes };
+        pendenteSug = { acao: intencao.acao, sugestoes: resultado.sugestoes, filtroData: intencao.filtroData || null };
         ocupado = false; setStatus(false);
         return;
       }
@@ -1378,7 +1380,7 @@ async function processarTexto(texto) {
         const resp = "Nao achei \"" + nomeQuery + "\" exato. Voce quis dizer?\n\n" + lista + "\n\nResponda com o nome ou numero.";
         addMsg("bot", resp);
         historico.push({ role:"assistant", content:resp });
-        pendenteSug = { acao:"listar_pedidos", sugestoes: resultado.sugestoes };
+        pendenteSug = { acao:"listar_pedidos", sugestoes: resultado.sugestoes, filtroData: intencao.filtroData || null };
         ocupado = false; setStatus(false);
         return;
       }
@@ -1518,85 +1520,54 @@ const PW_DADOS = {
   pedidos: {
     titulo: "📋 Pedidos",
     blocos: [
-      { titulo: "Ver pedido", linhas: [
-        `<span class="pw-label">Exemplos:</span> "me manda o pedido de João", "mostra o pedido da Ana", "qual o pedido do Carlos", "ver pedido de Maria"`
-      ]},
-      { titulo: "Com filtro de data", linhas: [
-        `"pedido de Ana <span class="pw-hl">hoje</span>"`,
-        `"pedido de João <span class="pw-hl">dessa semana</span>"`,
-        `"pedido de Maria <span class="pw-hl">ontem</span>"`,
-        `"pedido de Carlos <span class="pw-hl">últimos 7 dias</span>"`
-      ]},
-      { titulo: "Editar pedido", linhas: [
-        `"editar pedido de João"`,
-        `"mudar pedido da Ana"`,
-        `"alterar pedido do Carlos"`
-      ]},
-      { titulo: "Todos os pedidos", linhas: [
-        `"listar pedidos da Ana"`,
-        `"todos os pedidos do João"`,
-        `"histórico de pedidos"`
-      ]},
-      { titulo: "Quem pediu hoje", linhas: [
-        `"quem fez pedido hoje"`,
-        `"pedidos de hoje"`
-      ]}
+      { titulo: "Ver pedido",
+        exemplos: `"me manda o pedido de João", "mostra o pedido da Ana", "qual o pedido do Carlos", "ver pedido de Maria"`,
+        filtros: ["hoje","ontem","essa semana","últimos 7 dias"]
+      },
+      { titulo: "Editar pedido",
+        exemplos: `"editar pedido de João", "mudar pedido da Ana", "alterar pedido do Carlos"`
+      },
+      { titulo: "Todos os pedidos",
+        exemplos: `"listar pedidos da Ana", "todos os pedidos do João", "histórico de pedidos"`
+      },
+      { titulo: "Quem pediu hoje",
+        exemplos: `"quem fez pedido hoje", "pedidos de hoje"`
+      }
     ]
   },
   pagamentos: {
     titulo: "💰 Pagamentos",
     blocos: [
-      { titulo: "Registrar pagamento", linhas: [
-        `"João pagou 20"`,
-        `"lança 15 pra Ana"`,
-        `"quita Maria"`,
-        `"pago 30 de Carlos"`
-      ]},
-      { titulo: "Ver saldo", linhas: [
-        `"saldo de Ana"`,
-        `"dívida do João"`,
-        `"quanto deve Maria"`
-      ]},
-      { titulo: "Lista devedores", linhas: [
-        `"quem deve"`,
-        `"lista devedores"`,
-        `"todos com dívida"`
-      ]},
-      { titulo: "Lista credores", linhas: [
-        `"quem tem crédito"`,
-        `"lista credores"`
-      ]}
+      { titulo: "Registrar pagamento",
+        exemplos: `"João pagou 20", "lança 15 pra Ana", "quita Maria", "pago 30 de Carlos"`
+      },
+      { titulo: "Ver saldo / dívida",
+        exemplos: `"saldo de Ana", "dívida do João", "quanto deve Maria"`
+      },
+      { titulo: "Lista devedores",
+        exemplos: `"quem deve", "lista devedores", "todos com dívida"`
+      },
+      { titulo: "Lista credores",
+        exemplos: `"quem tem crédito", "lista credores"`
+      }
     ]
   },
   comprovantes: {
     titulo: "🧾 Comprovantes",
     blocos: [
-      { titulo: "Ver comprovantes", linhas: [
-        `"comprovante de Ana"`,
-        `"comprovantes do João"`
-      ]},
-      { titulo: "Com filtro de data", linhas: [
-        `"comprovante de Ana <span class="pw-hl">essa semana</span>"`,
-        `"comprovante do João <span class="pw-hl">últimos 30 dias</span>"`,
-        `"comprovante de Maria <span class="pw-hl">hoje</span>"`,
-        `"comprovante de Carlos <span class="pw-hl">ontem</span>"`
-      ]},
-      { titulo: "Data específica", linhas: [
-        `"comprovante de Ana de <span class="pw-hl">01/05/2025 a 31/05/2025</span>"`
-      ]}
+      { titulo: "Ver comprovantes",
+        exemplos: `"comprovante de Ana", "comprovantes do João"`,
+        filtros: ["hoje","ontem","essa semana","últimos 30 dias","01/05 a 31/05"]
+      }
     ]
   },
   filtros: {
     titulo: "📅 Filtros de Data",
     blocos: [
-      { titulo: "Funciona com pedidos e comprovantes", linhas: [
-        `• <span class="pw-hl">hoje</span> — somente hoje`,
-        `• <span class="pw-hl">ontem</span> — somente ontem`,
-        `• <span class="pw-hl">essa semana</span> / <span class="pw-hl">esta semana</span> — dom a sáb da semana atual`,
-        `• <span class="pw-hl">últimos 7 dias</span> / <span class="pw-hl">últimas 2 semanas</span> / <span class="pw-hl">último mês</span>`,
-        `• <span class="pw-hl">01/05/2025</span> — dia exato`,
-        `• <span class="pw-hl">01/05/2025 a 31/05/2025</span> — intervalo`
-      ]}
+      { titulo: "Funciona com pedidos e comprovantes",
+        exemplos: `Adicione qualquer filtro abaixo junto ao nome do cliente:`,
+        filtros: ["hoje","ontem","essa semana","esta semana","últimos 7 dias","últimas 2 semanas","último mês","01/05/2025","01/05/2025 a 31/05/2025"]
+      }
     ]
   }
 };
@@ -1605,11 +1576,12 @@ function abrirCategoria(cat) {
   const dados = PW_DADOS[cat];
   if (!dados) return;
   document.getElementById("pw-detail-titulo").textContent = dados.titulo;
-  const html = dados.blocos.map(b =>
-    `<div class="pw-bloco"><div class="pw-bloco-titulo">${b.titulo}</div>${
-      b.linhas.map(l => `<div class="pw-linha">${l}</div>`).join("")
-    }</div>`
-  ).join("");
+  const html = dados.blocos.map(b => {
+    const tagsHtml = b.filtros
+      ? `<div class="pw-filtros">${b.filtros.map(f => `<span class="pw-tag">[${f}]</span>`).join("")}</div>`
+      : "";
+    return `<div class="pw-bloco"><div class="pw-bloco-titulo">${b.titulo}</div><div class="pw-exemplos">${b.exemplos}</div>${tagsHtml}</div>`;
+  }).join("");
   document.getElementById("pw-detail-conteudo").innerHTML = html;
   document.getElementById("pw-overlay").style.display = "none";
   const det = document.getElementById("pw-detail-overlay");
