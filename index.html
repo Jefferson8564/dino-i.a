@@ -121,6 +121,52 @@
   #btn-pedido-editar { background:#1D3A4F; color:#53BDEB; }
   #btn-pedido-editar:active { background:#163040; }
 
+  /* ── MODAL PALAVRAS-CHAVE ── */
+  #kw-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:300; justify-content:center; align-items:flex-end; }
+  #kw-overlay.open { display:flex; }
+  #kw-box { background:#0d1a20; border-radius:20px 20px 0 0; width:100%; max-width:480px; height:82dvh; display:flex; flex-direction:column; animation: slideUp .22s ease; overflow:hidden; position:relative; }
+
+  /* ── Tela 1: lista de categorias ── */
+  #kw-screen-list { position:absolute; inset:0; display:flex; flex-direction:column; transition: transform .28s cubic-bezier(.4,0,.2,1); transform:translateX(0); }
+  #kw-screen-list.saindo { transform:translateX(-100%); }
+  #kw-list-header { padding:18px 20px 14px; border-bottom:1px solid #1e2e38; flex-shrink:0; }
+  #kw-list-header h2 { color:#E9EDEF; font-size:16px; font-weight:700; }
+  #kw-list-header p { color:#8696A0; font-size:12px; margin-top:3px; }
+  #kw-list-body { flex:1; overflow-y:auto; padding:10px 14px; display:flex; flex-direction:column; gap:8px; }
+  #kw-list-body::-webkit-scrollbar { width:3px; }
+  .kw-cat-row { background:#111B21; border:1px solid #1e2e38; border-radius:14px; padding:14px 16px; display:flex; align-items:center; gap:14px; cursor:pointer; user-select:none; -webkit-user-select:none; transition:background .15s, transform .1s; }
+  .kw-cat-row:active { background:#1a2a36; transform:scale(.98); }
+  .kw-cat-icon { font-size:26px; flex-shrink:0; }
+  .kw-cat-info { flex:1; }
+  .kw-cat-name { font-size:15px; font-weight:700; }
+  .kw-cat-sub { font-size:12px; color:#8696A0; margin-top:2px; }
+  .kw-cat-arrow { color:#3D4A50; font-size:18px; flex-shrink:0; }
+  #kw-list-close { margin:8px 14px 24px; padding:13px; background:#1E2D36; border:none; border-radius:12px; color:#E9EDEF; font-size:15px; font-weight:600; cursor:pointer; flex-shrink:0; }
+  #kw-list-close:active { background:#2A3942; }
+
+  /* ── Tela 2: detalhe da categoria ── */
+  #kw-screen-detail { position:absolute; inset:0; display:flex; flex-direction:column; transform:translateX(100%); transition: transform .28s cubic-bezier(.4,0,.2,1); pointer-events:none; }
+  #kw-screen-detail.entrando { transform:translateX(0); pointer-events:all; }
+  #kw-detail-header { padding:14px 16px 12px; border-bottom:1px solid #1e2e38; flex-shrink:0; display:flex; align-items:center; gap:10px; }
+  #kw-back-btn { background:none; border:none; color:#53BDEB; font-size:22px; cursor:pointer; padding:0 6px 0 0; line-height:1; flex-shrink:0; display:flex; align-items:center; }
+  #kw-detail-title { color:#E9EDEF; font-size:15px; font-weight:700; flex:1; }
+  #kw-detail-scroll { flex:1; overflow-y:auto; padding:12px 14px 8px; display:flex; flex-direction:column; gap:12px; }
+  #kw-detail-scroll::-webkit-scrollbar { width:3px; }
+  #kw-detail-scroll::-webkit-scrollbar-thumb { background:#2A3942; border-radius:3px; }
+  #kw-detail-close { margin:8px 14px 24px; padding:13px; background:#1E2D36; border:none; border-radius:12px; color:#E9EDEF; font-size:15px; font-weight:600; cursor:pointer; flex-shrink:0; }
+  #kw-detail-close:active { background:#2A3942; }
+
+  /* ── Blocos de conteúdo do detalhe ── */
+  .kw-bloco { background:#111B21; border:1px solid #1e2e38; border-radius:14px; overflow:hidden; }
+  .kw-bloco-titulo { padding:10px 14px 8px; color:#8696A0; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; border-bottom:1px solid #1a2a34; background:#0d1a20; }
+  .kw-bloco-corpo { padding:10px 12px 12px; display:flex; flex-direction:column; gap:7px; }
+  .kw-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .kw-chip { background:#1E2D36; border:1px solid #2A3942; border-radius:20px; padding:6px 12px; color:#C8D4DA; font-size:13px; line-height:1.3; }
+  .kw-chip.filtro { background:#0d2035; border-color:#1d4a70; color:#53BDEB; }
+  .kw-acao { background:#0d1f15; border:1px solid #1a4a2a; border-radius:10px; padding:8px 12px; display:flex; align-items:flex-start; gap:8px; }
+  .kw-acao-label { color:#4ade80; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; flex-shrink:0; padding-top:1px; }
+  .kw-acao-text { color:#86efac; font-size:12px; line-height:1.5; }
+
   /* ── PEDIDO INLINE NO CHAT ── */
   .chat-pedido { background:#1A2E38; border:1px solid #2A3942; border-radius:12px; padding:12px 14px; margin-top:2px; min-width:210px; }
   .chat-pedido-titulo { color:#E9EDEF; font-weight:700; font-size:14px; margin-bottom:2px; }
@@ -145,7 +191,7 @@
 <body>
 <div id="app">
   <div id="header">
-    <div class="header-avatar">&#x1F916;<div class="status-dot" id="statusDot"></div></div>
+    <div class="header-avatar">&#x1F47D;<div class="status-dot" id="statusDot"></div></div>
     <div class="header-info">
       <div class="header-name">𝕕𝕚𝕟𝕠 𝕚.𝕒 <span style="font-size:11px;color:#c75b24;font-weight:400;">&#x25CF; administrador</span></div>
       <div class="header-status" id="headerStatus">online</div>
@@ -180,9 +226,76 @@
           <button onclick="limparConversa()" style="flex:1;padding:9px;background:#c0392b;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">Apagar tudo</button>
         </div>
       </div>
+      <div class="cfg-section-title" style="margin-top:16px;">Palavras-chave</div>
+      <button onclick="abrirKw()" style="width:100%;padding:10px;background:#2A3942;color:#E9EDEF;border:none;border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px;">📖 Ver comandos e palavras-chave</button>
       <button id="cfg-close" onclick="fecharCfg()">Fechar</button>
     </div>
   </div>
+  <!-- MODAL PALAVRAS-CHAVE -->
+  <div id="kw-overlay" onclick="fecharKwFora(event)">
+    <div id="kw-box">
+
+      <!-- TELA 1: lista de categorias -->
+      <div id="kw-screen-list">
+        <div id="kw-list-header">
+          <h2>📖 Comandos e Palavras-chave</h2>
+          <p>Toque numa categoria para ver os comandos</p>
+        </div>
+        <div id="kw-list-body">
+
+          <div class="kw-cat-row" onclick="abrirKwDetalhe('pedidos')">
+            <span class="kw-cat-icon">📋</span>
+            <div class="kw-cat-info">
+              <div class="kw-cat-name" style="color:#c75b24;">Pedidos</div>
+              <div class="kw-cat-sub">Ver, editar, histórico, quem pediu hoje</div>
+            </div>
+            <span class="kw-cat-arrow">›</span>
+          </div>
+
+          <div class="kw-cat-row" onclick="abrirKwDetalhe('pagamentos')">
+            <span class="kw-cat-icon">💰</span>
+            <div class="kw-cat-info">
+              <div class="kw-cat-name" style="color:#25D366;">Pagamentos</div>
+              <div class="kw-cat-sub">Registrar pagamento, saldo, devedores</div>
+            </div>
+            <span class="kw-cat-arrow">›</span>
+          </div>
+
+          <div class="kw-cat-row" onclick="abrirKwDetalhe('comprovantes')">
+            <span class="kw-cat-icon">🧾</span>
+            <div class="kw-cat-info">
+              <div class="kw-cat-name" style="color:#53BDEB;">Comprovantes</div>
+              <div class="kw-cat-sub">Ver comprovantes, filtros de data</div>
+            </div>
+            <span class="kw-cat-arrow">›</span>
+          </div>
+
+          <div class="kw-cat-row" onclick="abrirKwDetalhe('filtros')">
+            <span class="kw-cat-icon">📅</span>
+            <div class="kw-cat-info">
+              <div class="kw-cat-name" style="color:#a78bfa;">Filtros de Data</div>
+              <div class="kw-cat-sub">hoje, ontem, essa semana, intervalo…</div>
+            </div>
+            <span class="kw-cat-arrow">›</span>
+          </div>
+
+        </div>
+        <button id="kw-list-close" onclick="fecharKw()">Fechar</button>
+      </div>
+
+      <!-- TELA 2: detalhe da categoria -->
+      <div id="kw-screen-detail">
+        <div id="kw-detail-header">
+          <button id="kw-back-btn" onclick="voltarKwLista()">‹</button>
+          <span id="kw-detail-title"></span>
+        </div>
+        <div id="kw-detail-scroll"></div>
+        <button id="kw-detail-close" onclick="fecharKw()">Fechar</button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- MODAL EDITAR PEDIDO -->
   <div id="pedido-overlay" onclick="fecharPedidoFora(event)">
     <div id="pedido-box">
@@ -511,21 +624,20 @@ function enviarComprovanteWpp(phone, nome, valor, novoSaldo, novTk, novDi) {
   else                    saldoLinha = "✅ Conta quitada ♻️";
 
   let extras = "";
-  if (novTk > 0) extras += " 🎟️ +" + novTk;
-  if (novDi > 0) extras += " 💎 +" + novDi;
+  if (novTk > 0) extras += "\n🎟️ +" + novTk;
+  if (novDi > 0) extras += "\n💎 +" + novDi;
 
   const msg =
-    "🤖 *𝕕𝕚𝕟𝕠 𝕚.𝕒* ᵃᵈᵐ\n" +
-    "aqui está seu comprovante de pagamento.\n\n" +
+    "👽 *𝕕𝕚𝕟𝕠 𝕚.𝕒* ᵃᵈᵐⁱⁿⁱˢᵗʳᵃᵈᵒʳ\n" +
+    "aqui está seu comprovante de pagamento.\n" +
     "*O Rei da Coxinha* 🍗\n" +
     "──────────────────\n" +
     "👤 Cliente: " + nome + "\n" +
     "📅 Data/Hora: " + dh + "\n" +
     "💰 Valor pago: R$ " + valor.toFixed(2).replace(".",",") + "\n\n" +
     saldoLinha + "\n" +
-    "──────────────────\n" +
-    (extras ? extras.trim() + "\n" : "") +
-    " Obrigado pelo pagamento!";
+    "──────────────────" + extras + "\n" +
+    "👽 Obrigado pelo pagamento!";
 
   const tel = String(phone).replace(/\D/g, "");
   const link = "https://wa.me/" + (tel.startsWith("55") ? tel : "55" + tel) + "?text=" + encodeURIComponent(msg);
@@ -625,46 +737,57 @@ function cancelarPendente() {
 function detectarPorRegex(texto) {
   const t = normStr(texto);
 
-  // helper: extrai nome após preposição "de/do/da/dos/das/do/pra/para"
+  // helper: extrai nome após preposição
   function extrairNome(str) {
     const m = str.match(/\b(?:de|do|da|dos|das|pra|para)\s+([a-záàâãéêíóôõúç][a-záàâãéêíóôõúç\s]{1,40}?)(?:\s+de\s+\d|$)/i);
     return m ? m[1].trim() : "";
+  }
+
+  // helper: extrai filtro de data ISO a partir do texto
+  function extrairFiltroData(str) {
+    const datas = [...texto.matchAll(/(\d{2}\/\d{2}\/\d{2,4})/g)].map(m => m[1]);
+    const toISO = ds => { const [d,m,a] = ds.split("/"); const ano = a.length===2?"20"+a:a; return ano+"-"+m+"-"+d; };
+    if (datas.length >= 2) return { inicio: toISO(datas[0])+"T00:00:00", fim: toISO(datas[1])+"T23:59:59" };
+    if (datas.length === 1) return { inicio: toISO(datas[0])+"T00:00:00", fim: toISO(datas[0])+"T23:59:59" };
+    const spNow = () => new Date(new Date().toLocaleString("en-US",{timeZone:"America/Sao_Paulo"}));
+    const isoFmt = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    if (/\bhoje\b/.test(str)) { const d=spNow(); const s=isoFmt(d); return {inicio:s+"T00:00:00",fim:s+"T23:59:59"}; }
+    if (/\bontem\b/.test(str)) { const d=spNow(); d.setDate(d.getDate()-1); const s=isoFmt(d); return {inicio:s+"T00:00:00",fim:s+"T23:59:59"}; }
+    if (/\b(essa|esta)\s+semana\b/.test(str)) {
+      const d=spNow(); const dow=d.getDay();
+      const ini=new Date(d); ini.setDate(d.getDate()-dow);
+      const fim=new Date(d); fim.setDate(d.getDate()+(6-dow));
+      return {inicio:isoFmt(ini)+"T00:00:00",fim:isoFmt(fim)+"T23:59:59"};
+    }
+    const mDias = str.match(/[uú]ltimos?\s+(\d+)\s*(dia[s]?|semana[s]?|m[eê]s|meses)/);
+    if (mDias) {
+      let dias=parseInt(mDias[1]);
+      if (/semana/.test(mDias[2])) dias*=7;
+      if (/m[eê]s|meses/.test(mDias[2])) dias*=30;
+      const hoje=spNow(); const ini=new Date(hoje); ini.setDate(hoje.getDate()-dias);
+      return {inicio:isoFmt(ini)+"T00:00:00",fim:isoFmt(hoje)+"T23:59:59"};
+    }
+    return null;
   }
 
   // ── COMPROVANTE(S) ──
   if (/comprovante[s]?|historico\s+de\s+pagamento[s]?/.test(t)) {
     const nome = extrairNome(t);
     const obj = { acao:"comprovantes", cliente: nome };
-    // Tenta datas explícitas DD/MM/AAAA
-    const datas = [...texto.matchAll(/(\d{2}\/\d{2}\/\d{4})/g)].map(m => m[1]);
-    if (datas[0]) obj.data_inicio = datas[0];
-    if (datas[1]) obj.data_fim    = datas[1];
-    // Tenta "últimos X dias/semanas/meses"
-    if (!datas.length) {
-      const mDias = t.match(/[uú]ltimos?\s+(\d+)\s*(dia[s]?|semana[s]?|m[eê]s|meses)/);
-      if (mDias) {
-        const qtd  = parseInt(mDias[1]);
-        const tipo = mDias[2];
-        let dias = qtd;
-        if (/semana/.test(tipo)) dias = qtd * 7;
-        if (/m[eê]s|meses/.test(tipo)) dias = qtd * 30;
-        const hoje = new Date();
-        const inicio = new Date(hoje);
-        inicio.setDate(hoje.getDate() - dias);
-        const fmt = d => d.toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric" });
-        obj.data_inicio = fmt(inicio);
-        obj.data_fim    = fmt(hoje);
-      }
+    const filtro = extrairFiltroData(t);
+    if (filtro) {
+      // converte ISO de volta para DD/MM/AAAA que o handler espera
+      const isoToStr = s => { const [a,m,d] = s.split("T")[0].split("-"); return d+"/"+m+"/"+a; };
+      obj.data_inicio = isoToStr(filtro.inicio);
+      obj.data_fim    = isoToStr(filtro.fim);
     }
     return obj;
   }
 
   // ── PAGAMENTO: pagou / lança / quita / quitou / quitado / pago ──
   if (/\bpagou\b|\blanca\b|\blança\b|\bquita\b|\bquitou\b|\bquitado\b|\bpago\b/.test(t)) {
-    // extrai valor (número)
     const mVal = texto.match(/\b(\d+(?:[.,]\d{1,2})?)\b/);
     const valor = mVal ? parseFloat(mVal[1].replace(",",".")) : 0;
-    // extrai nome: pode vir antes ou depois do verbo
     const mNome = t.match(/^([a-záàâãéêíóôõúç][a-záàâãéêíóôõúç\s]{1,30}?)\s+(?:pagou|pago|quitou|quitado)/i)
                 || t.match(/(?:de|do|da)\s+([a-záàâãéêíóôõúç][a-záàâãéêíóôõúç\s]{1,30}?)(?:\s|$)/i);
     const cliente = mNome ? mNome[1].trim() : "";
@@ -673,12 +796,11 @@ function detectarPorRegex(texto) {
 
   // ── DÍVIDA / DÉBITO / SALDO de alguém específico ──
   const temPessoa = /\b(?:de|do|da)\s+[a-záàâãéêíóôõúç]/.test(t);
-  if (/d[ií]vida[s]?|d[eé]bito[s]?|saldo\s+(?:de|do|da)|quanto\s+(?:deve|ta\s+devendo|está\s+devendo)/.test(t) && temPessoa) {
-    const nome = extrairNome(t);
-    return { acao:"consulta", cliente: nome };
+  if (/d[ií]vida[s]?|d[eé]bito[s]?|saldo\s+(?:de|do|da)|quanto\s+(?:deve|ta\s+devendo|esta\s+devendo)/.test(t) && temPessoa) {
+    return { acao:"consulta", cliente: extrairNome(t) };
   }
 
-  // ── LISTA DEVEDORES (sem nome específico) ──
+  // ── LISTA DEVEDORES ──
   if (/d[ií]vida[s]?|d[eé]bito[s]?|devendo|devedor[es]?|quem\s+deve/.test(t) && !temPessoa) {
     return { acao:"lista_devedores" };
   }
@@ -689,30 +811,37 @@ function detectarPorRegex(texto) {
   }
 
   // ── QUEM TEM / FEZ PEDIDO ──
-  if (/quem\s+(tem|fez|fiz|tinha|tinha|efetuou|realizou|mandou|colocou)?\s*pedido[s]?/.test(t) ||
+  if (/quem\s+(tem|fez|fiz|efetuou|realizou|mandou|colocou)?\s*pedido[s]?/.test(t) ||
       /pedido[s]?\s+(de\s+hoje|hoje|do\s+dia)/.test(t)) {
     const hoje = /hoje|do\s+dia|de\s+hoje/.test(t);
     return { acao:"lista_pedidos_clientes", hoje };
   }
 
   // ── PEDIDO: ver / editar / listar todos ──
-  if (/\bpedidos?\b/.test(t)) {
+  // Palavras que ativam este bloco:
+  const toquePedido = /\bpedidos?\b|\bmanda\s+o\s+pedido\b|\bmande\s+o\s+pedido\b|\bme\s+manda\s+o\s+pedido\b|\bme\s+mande\s+o\s+pedido\b/.test(t);
+  if (toquePedido) {
     const nome = extrairNome(t);
+    const filtro = extrairFiltroData(t);
+
+    // Editar: palavras explícitas de modificação
     if (/\beditar\b|\balterar\b|\bmudar\b|\bmodificar\b|\batualizar\b/.test(t)) {
-      return { acao:"editar_pedido", cliente: nome };
+      return { acao:"editar_pedido", cliente: nome, filtroData: filtro };
     }
-    // "todos os pedidos", "listar pedidos", "mostrar pedidos", "historico"
+    // Histórico / todos
     if (/\btodos\b|\blistar\b|\bhistorico\b|\bhist[oó]rico\b|\btodas\b/.test(t)) {
-      return { acao:"listar_pedidos", cliente: nome };
+      return { acao:"listar_pedidos", cliente: nome, filtroData: filtro };
     }
-    if (/\bver\b|\bveja\b|\bmostr[ae]\b|\bqual\b|\bquais\b/.test(t)) {
-      return { acao:"ver_pedido", cliente: nome };
+    // Ver: palavras de visualização, envio, compartilhamento
+    // "mostrar", "me manda", "me mande", "manda", "ver", "qual", "enviar", "compartilhar"
+    if (/\bver\b|\bveja\b|\bmostr[ae]\b|\bqual\b|\bquais\b|\bmanda\b|\bmande\b|\bme\s+manda\b|\bme\s+mande\b|\bcompartilh[ae]\b|\benvie?\b|\benviar\b/.test(t)) {
+      return { acao:"ver_pedido", cliente: nome, filtroData: filtro };
     }
-    // genérico: mencionou pedido + nome → ver
-    if (nome) return { acao:"ver_pedido", cliente: nome };
+    // genérico com nome → ver
+    if (nome) return { acao:"ver_pedido", cliente: nome, filtroData: filtro };
   }
 
-  return null; // deixa a IA decidir
+  return null;
 }
 
 // ── IA ──
@@ -1000,17 +1129,20 @@ async function processarTexto(texto) {
 
       // ── Rota: ver_pedido / editar_pedido ──
       if (pendenteSug.acao === "ver_pedido" || pendenteSug.acao === "editar_pedido") {
+        const filtro = pendenteSug.filtroData || null;
+        const editar = pendenteSug.acao === "editar_pedido";
         pendenteSug = null;
         ocupado = false; setStatus(false);
-        await mostrarPedidosChat(escolha);
+        await mostrarPedidosChat(escolha, filtro, editar);
         return;
       }
 
       // ── Rota: listar_pedidos ──
       if (pendenteSug.acao === "listar_pedidos") {
+        const filtro = pendenteSug.filtroData || null;
         pendenteSug = null;
         ocupado = false; setStatus(false);
-        await mostrarPedidosChat(escolha);
+        await mostrarPedidosChat(escolha, filtro, false);
         return;
       }
 
@@ -1275,7 +1407,7 @@ async function processarTexto(texto) {
       }
 
       const cliPed = resultado.cliente;
-      await mostrarPedidosChat(cliPed);
+      await mostrarPedidosChat(cliPed, intencao.filtroData || null, intencao.acao === "editar_pedido");
       ocupado = false; setStatus(false);
 
     } else if (intencao.acao === "listar_pedidos") {
@@ -1304,7 +1436,7 @@ async function processarTexto(texto) {
         return;
       }
 
-      await mostrarPedidosChat(resultado.cliente);
+      await mostrarPedidosChat(resultado.cliente, intencao.filtroData || null, false);
       ocupado = false; setStatus(false);
 
     } else if (intencao.acao === "lista_pedidos_clientes") {
@@ -1419,6 +1551,136 @@ function renderModelList() {
     list.appendChild(item);
   }
 }
+var KW_DADOS = {
+  pedidos: {
+    titulo: "📋 Pedidos",
+    blocos: [
+      {
+        titulo: "Ver Pedido",
+        chips: ["me manda o pedido de João","mostra o pedido da Ana","qual o pedido do Carlos","ver pedido de Maria"],
+        filtros: ["hoje","ontem","essa semana","últimos 7 dias","últimas 2 semanas"],
+        acao: "Mostra o pedido mais recente do cliente, com filtro de data opcional"
+      },
+      {
+        titulo: "Editar Pedido",
+        chips: ["editar pedido de João","mudar pedido da Ana","alterar pedido do Carlos"],
+        acao: "Abre o pedido para alterar itens e quantidades"
+      },
+      {
+        titulo: "Histórico",
+        chips: ["listar pedidos da Ana","todos os pedidos do João","histórico de pedidos"],
+        acao: "Lista todos os pedidos do cliente"
+      },
+      {
+        titulo: "Quem Pediu Hoje",
+        chips: ["quem fez pedido hoje","pedidos de hoje"],
+        acao: "Lista todos os clientes que fizeram pedido hoje"
+      }
+    ]
+  },
+  pagamentos: {
+    titulo: "💰 Pagamentos",
+    blocos: [
+      {
+        titulo: "Registrar Pagamento",
+        chips: ["João pagou 20","lança 15 pra Ana","quita Maria","pago 30 de Carlos"],
+        acao: "Registra o pagamento e atualiza o saldo do cliente"
+      },
+      {
+        titulo: "Ver Saldo / Dívida",
+        chips: ["saldo de Ana","dívida do João","quanto deve Maria"],
+        acao: "Mostra o saldo atual do cliente"
+      },
+      {
+        titulo: "Devedores e Credores",
+        chips: ["quem deve","lista devedores","quem tem crédito","lista credores"],
+        acao: "Lista todos os clientes com dívida ou crédito"
+      }
+    ]
+  },
+  comprovantes: {
+    titulo: "🧾 Comprovantes",
+    blocos: [
+      {
+        titulo: "Ver Comprovantes",
+        chips: ["comprovante de Ana","comprovantes do João"],
+        filtros: ["hoje","ontem","essa semana","últimos 30 dias"],
+        acao: "Lista os comprovantes de pagamento do cliente"
+      },
+      {
+        titulo: "Intervalo de Datas",
+        filtros: ["01/05/2025","01/05/2025 a 31/05/2025"],
+        acao: "Filtra por dia exato ou intervalo personalizado"
+      }
+    ]
+  },
+  filtros: {
+    titulo: "📅 Filtros de Data",
+    blocos: [
+      {
+        titulo: "Palavras aceitas",
+        filtros: ["hoje","ontem","essa semana","esta semana","últimos 7 dias","últimas 2 semanas","último mês"],
+        acao: "Funciona junto com pedidos e comprovantes"
+      },
+      {
+        titulo: "Dia Exato",
+        filtros: ["01/05/2025"],
+        acao: "Informe uma data no formato dd/mm/aaaa"
+      },
+      {
+        titulo: "Intervalo",
+        filtros: ["01/05/2025 a 31/05/2025"],
+        acao: "Informe início e fim separados por 'a' (ex: 01/05 a 31/05)"
+      }
+    ]
+  }
+};
+
+function abrirKw() {
+  fecharCfg();
+  voltarKwLista(true);
+  document.getElementById("kw-overlay").classList.add("open");
+}
+function fecharKw() {
+  document.getElementById("kw-overlay").classList.remove("open");
+}
+function fecharKwFora(e) {
+  if (e.target === document.getElementById("kw-overlay")) fecharKw();
+}
+function voltarKwLista(imediato) {
+  const lista = document.getElementById("kw-screen-list");
+  const detalhe = document.getElementById("kw-screen-detail");
+  if (imediato) {
+    lista.style.transition = "none";
+    detalhe.style.transition = "none";
+    setTimeout(() => { lista.style.transition=""; detalhe.style.transition=""; }, 50);
+  }
+  lista.classList.remove("saindo");
+  detalhe.classList.remove("entrando");
+}
+function abrirKwDetalhe(id) {
+  const dados = KW_DADOS[id];
+  if (!dados) return;
+  document.getElementById("kw-detail-title").textContent = dados.titulo;
+  const scroll = document.getElementById("kw-detail-scroll");
+  scroll.innerHTML = dados.blocos.map(b => {
+    const chipsHtml = (b.chips || []).map(c => `<span class="kw-chip">${c}</span>`).join("");
+    const filtrosHtml = (b.filtros || []).map(f => `<span class="kw-chip filtro">${f}</span>`).join("");
+    const todasChips = chipsHtml || filtrosHtml
+      ? `<div class="kw-chips">${chipsHtml}${filtrosHtml}</div>` : "";
+    return `<div class="kw-bloco">
+      <div class="kw-bloco-titulo">${b.titulo}</div>
+      <div class="kw-bloco-corpo">
+        ${todasChips}
+        <div class="kw-acao"><span class="kw-acao-label">Ação</span><span class="kw-acao-text">${b.acao}</span></div>
+      </div>
+    </div>`;
+  }).join("");
+  scroll.scrollTop = 0;
+  document.getElementById("kw-screen-list").classList.add("saindo");
+  document.getElementById("kw-screen-detail").classList.add("entrando");
+}
+
 function abrirCfg() {
   document.getElementById("cfg-overlay").classList.add("open");
   renderKeyGrid();
@@ -1957,7 +2219,7 @@ function enviarComprovanteAlteracaoWpp() {
     .join("\n");
 
   const msg =
-    "🤖 *𝕕𝕚𝕟𝕠 𝕚.𝕒* ᵃᵈᵐ\n" +
+    "👽 *𝕕𝕚𝕟𝕠 𝕚.𝕒* ᵃᵈᵐⁱⁿⁱˢᵗʳᵃᵈᵒʳ\n" +
     "*seu pedido foi alterado*\n" +
     "➖➖➖➖➖➖➖➖➖➖\n" +
     linhasItens + "\n" +
@@ -1978,7 +2240,42 @@ function ativarEdicaoPedido() {
 
 // ── PEDIDO INLINE NO CHAT ──────────────────────────────────────
 
-function addPedidoCard(cliente, rows, cardapioArr) {
+function formatarDataHoraPedido(created_at) {
+  if (!created_at) return "";
+  try {
+    const d = new Date(created_at);
+    return d.toLocaleString("pt-BR", { timeZone:"America/Sao_Paulo", day:"2-digit", month:"2-digit", year:"2-digit", hour:"2-digit", minute:"2-digit" });
+  } catch(e) { return ""; }
+}
+
+function compartilharPedidoWpp() {
+  if (!pedidosInline) return;
+  const { cliente, rows, cardapioArr } = pedidosInline;
+  const dh = dataHoraSP();
+  let linhas = "";
+  rows.forEach((pedido, idx) => {
+    const itens = parsePedidoTexto(pedido.items, cardapioArr);
+    const total = Number(pedido.total || 0);
+    const dhPed = formatarDataHoraPedido(pedido.created_at);
+    if (rows.length > 1) linhas += "\n*Pedido " + (idx+1) + "*" + (dhPed ? " — " + dhPed : "") + "\n";
+    itens.forEach(i => {
+      const qty = Number(i.quantity||i.qty||i.quantidade||1);
+      linhas += "✅ " + qty + "x : " + (i.name||i.nome||"Item") + "*\n";
+    });
+    linhas += "💰 Total: R$ " + total.toFixed(2).replace(".",",") + "\n";
+  });
+  const msg =
+    "👽 *𝕕𝕚𝕟𝕠 𝕚.𝕒* ᵃᵈᵐⁱⁿⁱˢᵗʳᵃᵈᵒʳ\n" +
+    "*pedido de " + cliente.name + "*\n" +
+    "➖➖➖➖➖➖➖➖➖➖\n" +
+    linhas +
+    "➖➖➖➖➖➖➖➖➖➖\n" +
+    "📅 " + dh;
+  const tel = String(cliente.phone).replace(/\D/g,"");
+  window.open("https://wa.me/" + (tel.startsWith("55") ? tel : "55"+tel) + "?text=" + encodeURIComponent(msg), "_blank");
+}
+
+function addPedidoCard(cliente, rows, cardapioArr, modoEditar) {
   pedidosInline = { cliente, rows, cardapioArr };
   const t = agora();
   const temVarios = rows.length > 1;
@@ -1992,8 +2289,9 @@ function addPedidoCard(cliente, rows, cardapioArr) {
     rows.forEach((pedido, idx) => {
       const itens = parsePedidoTexto(pedido.items, cardapioArr);
       const total = Number(pedido.total || 0);
+      const dh = formatarDataHoraPedido(pedido.created_at);
       conteudo += `<div class="chat-pedido-bloco">
-        <div class="chat-pedido-bloco-num">Pedido ${idx+1}</div>
+        <div class="chat-pedido-bloco-num">Pedido ${idx+1}${dh ? ' <span style="font-weight:400;color:#8696A0;font-size:11px;">— '+dh+'</span>' : ''}</div>
         ${itens.map(i => `<div class="chat-pedido-item">${Number(i.quantity||i.qty||i.quantidade||1)}x : ${i.name||i.nome||"Item"}</div>`).join("")}
         <div class="chat-pedido-total">Total: R$ ${total.toFixed(2).replace(".",",")}</div>
       </div>`;
@@ -2001,15 +2299,23 @@ function addPedidoCard(cliente, rows, cardapioArr) {
   } else {
     const itens = parsePedidoTexto(rows[0].items, cardapioArr);
     const total = Number(rows[0].total || 0);
+    const dh = formatarDataHoraPedido(rows[0].created_at);
+    if (dh) conteudo += `<div style="color:#8696A0;font-size:11px;margin-bottom:6px;">📅 ${dh}</div>`;
     conteudo += itens.map(i =>
       `<div class="chat-pedido-item">${Number(i.quantity||i.qty||i.quantidade||1)}x : ${i.name||i.nome||"Item"}</div>`
     ).join("") + `<div class="chat-pedido-total">Total: R$ ${total.toFixed(2).replace(".",",")}</div>`;
   }
 
-  conteudo += `<div class="chat-pedido-btns">
-    <button class="chat-pedido-btn btn-cp-editar" onclick="editarPedidoInline()">✏️ Editar</button>
-    <button class="chat-pedido-btn btn-cp-excluir" onclick="excluirPedidoInline()">🗑️ Excluir</button>
-  </div>`;
+  if (modoEditar) {
+    conteudo += `<div class="chat-pedido-btns">
+      <button class="chat-pedido-btn btn-cp-editar" onclick="editarPedidoInline()">✏️ Editar</button>
+      <button class="chat-pedido-btn btn-cp-excluir" onclick="excluirPedidoInline()">🗑️ Excluir</button>
+    </div>`;
+  } else {
+    conteudo += `<div class="chat-pedido-btns">
+      <button class="chat-pedido-btn btn-cp-editar" style="background:#0d2e1e;color:#25D366;" onclick="compartilharPedidoWpp()">📲 Compartilhar no WhatsApp</button>
+    </div>`;
+  }
 
   row.innerHTML = `<div class="bubble bot">
     <span class="bubble-meta-wrap"><span class="bubble-time">${t}</span></span>
@@ -2019,16 +2325,23 @@ function addPedidoCard(cliente, rows, cardapioArr) {
   rolar();
 }
 
-async function mostrarPedidosChat(cliente) {
+async function mostrarPedidosChat(cliente, filtroData, modoEditar) {
   try {
     const cardapio = await (await fetch(SUPABASE_URL + "/rest/v1/cardapio?select=*&available=eq.true", { headers: SB_H })).json();
     const cardapioArr = Array.isArray(cardapio) ? cardapio : [];
-    const url = SUPABASE_URL + "/rest/v1/pedidos?select=*&customer_phone=eq." +
+    let url = SUPABASE_URL + "/rest/v1/pedidos?select=*&customer_phone=eq." +
       encodeURIComponent(cliente.phone) + "&order=created_at.desc";
+
+    if (filtroData) {
+      if (filtroData.inicio) url += "&created_at=gte." + encodeURIComponent(filtroData.inicio);
+      if (filtroData.fim)    url += "&created_at=lte." + encodeURIComponent(filtroData.fim);
+    }
+
     const rows = await (await fetch(url, { headers: SB_H })).json();
     document.getElementById("typing").style.display = "none";
     if (!Array.isArray(rows) || rows.length === 0) {
-      const msg = "Nenhum pedido encontrado para " + cliente.name + ".";
+      const periodoMsg = filtroData ? " no período informado" : "";
+      const msg = "Nenhum pedido encontrado para " + cliente.name + periodoMsg + ".";
       addMsg("bot", msg); historico.push({ role:"assistant", content: msg });
       return;
     }
@@ -2039,7 +2352,7 @@ async function mostrarPedidosChat(cliente) {
       addMsg("bot", msg); historico.push({ role:"assistant", content: msg });
       return;
     }
-    addPedidoCard(cliente, validos, cardapioArr);
+    addPedidoCard(cliente, validos, cardapioArr, !!modoEditar);
   } catch(e) {
     document.getElementById("typing").style.display = "none";
     addMsg("bot", "Erro ao buscar pedidos: " + e.message);
