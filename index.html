@@ -359,12 +359,8 @@ const CHAT_KEY = "maya_chat_history";
 const MODEL = "gemini-flash-latest";
 
 // ── Várias chaves Gemini, com rotação automática quando uma falha ──
-// Troque/adicione suas chaves aqui (gere em https://aistudio.google.com/apikey).
-const GEMINI_KEYS = [
-  "AIzaSyA_l9Q1baT6BeaB1e5fPcTXO-RvvzGGC0k", // chave 1 (a antiga — gere uma nova se essa já foi bloqueada)
-  "COLOQUE_AQUI_SUA_SEGUNDA_CHAVE",
-  "COLOQUE_AQUI_SUA_TERCEIRA_CHAVE"
-];
+// Substituído automaticamente no deploy (mesmo esquema do dino.html).
+const GEMINI_KEYS = __GEMINI_KEYS__;
 let geminiKeyIndex = (() => {
   try { const s = localStorage.getItem("maya_gemini_key_idx"); return s !== null ? parseInt(s) : 0; }
   catch(e){ return 0; }
